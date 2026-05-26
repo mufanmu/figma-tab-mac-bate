@@ -7,33 +7,28 @@ struct RGBA: Codable, Equatable, CustomStringConvertible {
     let a: Double
 
     init(r: Double, g: Double, b: Double, a: Double = 1) {
-        self.r = r
-        self.g = g
-        self.b = b
-        self.a = a
+        self.r = r; self.g = g; self.b = b; self.a = a
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        r = try container.decode(Double.self, forKey: .r)
-        g = try container.decode(Double.self, forKey: .g)
-        b = try container.decode(Double.self, forKey: .b)
-        a = try container.decodeIfPresent(Double.self, forKey: .a) ?? 1
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        r = try c.decode(Double.self, forKey: .r)
+        g = try c.decode(Double.self, forKey: .g)
+        b = try c.decode(Double.self, forKey: .b)
+        a = try c.decodeIfPresent(Double.self, forKey: .a) ?? 1
     }
 
     static let black = RGBA(r: 0, g: 0, b: 0)
     static let white = RGBA(r: 1, g: 1, b: 1)
 
     var description: String {
-        String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+        String(format: "#%02X%02X%02X", Int(r*255), Int(g*255), Int(b*255))
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case r, g, b, a
-    }
+    private enum CodingKeys: String, CodingKey { case r, g, b, a }
 }
 
-enum SelectionType: String, Codable {
+enum SelectionType: String, Codable, CaseIterable {
     case text = "TEXT"
     case rectangle = "RECTANGLE"
     case frame = "FRAME"
@@ -49,19 +44,23 @@ enum SelectionType: String, Codable {
     case other
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let raw = try container.decode(String.self)
+        let raw = try decoder.singleValueContainer().decode(String.self)
         self = SelectionType(rawValue: raw) ?? .other
     }
 
     var isShape: Bool {
         switch self {
-        case .rectangle, .ellipse, .polygon, .star, .frame, .component, .instance, .section:
-            return true
-        default:
-            return false
+        case .rectangle, .ellipse, .polygon, .star, .frame,
+             .component, .instance, .section: return true
+        default: return false
         }
     }
+}
+
+struct FontInfo: Codable, Identifiable {
+    var id: String { family }
+    let family: String
+    var styles: [String] = []
 }
 
 struct NodeProperties: Codable {
@@ -88,6 +87,11 @@ struct NodeProperties: Codable {
     var textAlign: String?
     var lineHeight: Double?
     var letterSpacing: Double?
+    var paragraphSpacing: Double?
+    var paragraphIndent: Double?
+    var textDecoration: String?
+    var textCase: String?
+    var textAutoResize: String?
     var characters: String?
 
     var selectionCount: Int = 0

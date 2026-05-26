@@ -7,6 +7,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published var viewport: ViewportInfo?
     @Published var isConnected = false
     @Published var statusText = "启动中..."
+    @Published var fonts: [FontInfo] = []
+    @Published var fontsLoaded = false
+    @Published var fontLoadCount = 0
 
     private var panel: NSPanel?
     private var pollingTask: Task<Void, Never>?
@@ -28,10 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func setupPanel() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: FigmaTokens.toolbarHeight + 12),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 56),
             styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+            backing: .buffered, defer: false
         )
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -40,13 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
-        panel.minSize = NSSize(width: 280, height: 40)
+        panel.becomesKeyOnlyIfNeeded = true
 
-        let hostingView = NSHostingView(
+        let hostingView = ToolbarHostingView(
             rootView: ToolbarView(delegate: self).environmentObject(self)
-                .frame(minWidth: 400, maxWidth: 600)
         )
-        hostingView.setFrameSize(NSSize(width: 420, height: FigmaTokens.toolbarHeight + 12))
+        hostingView.setFrameSize(NSSize(width: 400, height: 56))
         panel.contentView = hostingView
         panel.orderFront(nil)
         self.panel = panel
@@ -59,16 +60,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             statusText = "已连接 - 请在 Figma 选中元素"
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             canvas = await api.getCanvasInfo()
+            loadFontsInBackground()
             startPolling()
         } else {
             statusText = "连接失败"
         }
     }
 
+    func loadFontsIfNeeded() {
+        guard !fontsLoaded else { return }
+        fontsLoaded = true
+        let localAPI = api
+        Task { @MainActor in
+            let dict = await localAPI.loadFonts()
+            var list: [FontInfo] = []
+            for (family, styles) in dict.sorted(by: { $0.key < $1.key }) {
+                list.append(FontInfo(family: family, styles: styles))
+            }
+            self.fonts = list
+            self.fontLoadCount = min(50, list.count)
+        }
+    }
+
+    private func loadFontsInBackground() { loadFontsIfNeeded() }
+
+    func expandToInclude(font: String) {
+        guard fontLoadCount < fonts.count else { return }
+        let idx = fonts.firstIndex(where: { $0.family == font })
+        guard let idx = idx, idx >= fontLoadCount else { return }
+        fontLoadCount = min(idx + 10, fonts.count)
+    }
+
+    func loadMoreFonts() {
+        guard fontLoadCount > 0, fontLoadCount < fonts.count else { return }
+        let newCount = min(fontLoadCount + 50, fonts.count)
+        guard newCount != fontLoadCount else { return }
+        fontLoadCount = newCount
+    }
+
     private func startPolling() {
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self = self else { break }
+
+                if NSWorkspace.shared.frontmostApplication?.bundleIdentifier != "com.figma.Desktop" {
+                    panel?.orderOut(nil)
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    continue
+                }
+
                 let (node, vp) = await api.getState()
                 self.selectedNode = node
                 self.viewport = vp
@@ -84,22 +124,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func updatePanelPosition() {
-        guard let panel = panel, let node = selectedNode, let vp = viewport,
-              let vb = vp.bounds, let canvas = canvas, let fw = findFigmaWindowQuartz() else {
-            return
-        }
+        guard let panel = panel else { return }
+        guard let node = selectedNode,
+              (node.type == .text || node.type.isShape),
+              let vp = viewport, let vb = vp.bounds,
+              let canvas = canvas, let fw = findFigmaWindowQuartz()
+        else { panel.orderOut(nil); return }
 
         let nodeCX = node.x + node.width / 2
         let screenGap = 20.0
         let gapCanvas = screenGap * vb.height / canvas.height
 
         var domX = canvas.left + (nodeCX - vb.x) / vb.width * canvas.width
-
         var isBelow = false
         var domY = canvas.top + (node.y - gapCanvas - vb.y) / vb.height * canvas.height
         if domY < 0 {
             isBelow = true
-            let belowOffset = 20.0
             domX = canvas.left + canvas.width / 2
             domY = canvas.top + canvas.height * 2 / 3
             domY = max(0, min(domY, canvas.height - panel.frame.height))
@@ -107,33 +147,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             domY = max(0, domY)
         }
 
-        let titleBarH = max(0, fw.height - canvas.height)
+        let titleBarH = max(0, fw.h - canvas.height)
         let qx = fw.x + domX
         let qy = fw.y + titleBarH + domY
-
         let cocoaX = qx - panel.frame.width / 2
-        let cocoaY = isBelow
-            ? screenHeight - qy - panel.frame.height
-            : screenHeight - qy
+        let cocoaY = isBelow ? screenHeight - qy - panel.frame.height : screenHeight - qy
 
-        panel.setFrameOrigin(NSPoint(x: cocoaX, y: cocoaY))
+        let idealSize = panel.contentView?.fittingSize ?? NSSize(width: 300, height: 56)
+        let newWidth = min(idealSize.width, 1200)
+        if abs(panel.frame.width - newWidth) > 5 {
+            let oldWidth = panel.frame.width
+            panel.setContentSize(NSSize(width: newWidth, height: 56))
+            panel.setFrameOrigin(NSPoint(x: cocoaX + (oldWidth - newWidth) / 2, y: cocoaY))
+        } else {
+            panel.setFrameOrigin(NSPoint(x: cocoaX, y: cocoaY))
+        }
+
         panel.orderFront(nil)
     }
 
-    private func findFigmaWindowQuartz() -> (x: Double, y: Double, width: Double, height: Double)? {
+    private func findFigmaWindowQuartz() -> (x: Double, y: Double, w: Double, h: Double)? {
         guard let list = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
         ) as? [[String: Any]] else { return nil }
-
         for info in list {
             guard let owner = info[kCGWindowOwnerName as String] as? String,
                   owner == "Figma",
-                  let bounds = info[kCGWindowBounds as String] as? [String: Double],
-                  let x = bounds["X"], let y = bounds["Y"],
-                  let w = bounds["Width"], let h = bounds["Height"]
+                  let b = info[kCGWindowBounds as String] as? [String: Double],
+                  let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
             else { continue }
             return (x, y, w, h)
         }
         return nil
     }
+}
+
+final class ToolbarHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var acceptsFirstResponder: Bool { true }
 }
