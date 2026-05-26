@@ -1,0 +1,9 @@
+.build/
+.build-debug/
+.build-release/
+*.o
+*.pyc
+__pycache__/
+.DS_Store
+*.log
+/tmp/
