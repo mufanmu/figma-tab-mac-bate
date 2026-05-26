@@ -30,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private func setupPanel() {
-        let panel = NSPanel(
+        let panel = FloatingPanel(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 56),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: false
@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.appearance = NSAppearance(named: .darkAqua)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
@@ -96,6 +97,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let newCount = min(fontLoadCount + 50, fonts.count)
         guard newCount != fontLoadCount else { return }
         fontLoadCount = newCount
+    }
+
+    /// 全量加载字体（供搜索使用，不受分页限制）
+    func loadAllFontsForSearch() {
+        guard !fontsLoaded else {
+            fontLoadCount = fonts.count
+            return
+        }
+        fontsLoaded = true
+        let localAPI = api
+        Task { @MainActor in
+            let dict = await localAPI.loadFonts()
+            var list: [FontInfo] = []
+            for (family, styles) in dict.sorted(by: { $0.key < $1.key }) {
+                list.append(FontInfo(family: family, styles: styles))
+            }
+            self.fonts = list
+            self.fontLoadCount = list.count
+        }
     }
 
     private func startPolling() {
@@ -180,6 +200,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
         return nil
     }
+}
+
+/// 浮动面板 — 允许成为 Key Window 以支持 TextField 输入，但不激活 app
+final class FloatingPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
 
 final class ToolbarHostingView<Content: View>: NSHostingView<Content> {

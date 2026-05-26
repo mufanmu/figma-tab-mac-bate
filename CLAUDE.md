@@ -65,6 +65,32 @@ Figma Editor JS Context
 - `styleMask: [.borderless, .nonactivatingPanel]`
 - `orderFront(nil)` — 永远不要改为 `makeKeyAndOrderFront`（会抢夺焦点）
 - `level: .floating` + `collectionBehavior: [.canJoinAllSpaces, .fullScreenAuxiliary]`
+- TextField 需要面板成为 Key Window：创建 `FloatingPanel: NSPanel` 子类，重写 `canBecomeKey { true }`。.nonactivatingPanel 仍阻止 app 激活，仅允许键盘输入
+
+## 输入框设计规范
+
+工具栏中所有需要用户输入的文本框，统一遵循以下规范：
+
+### 占位态（未输入时）
+- 输入框显示当前值（如字体名、数值），**不透明度 35%**
+- 光标在输入框最前面闪烁，随时可输入
+- 占位文字不响应点击（`allowsHitTesting(false)`），点击事件穿透到 TextField
+
+### 输入态（输入中）
+- 用户键入的文字以**不透明度 100%** 显示
+- 占位文字自动隐藏
+- 输入内容为纯文本（不格式化、不校验）
+
+### 选中态（选择后）
+- 清空输入内容（`searchText = ""`）
+- 输入框回退为占位态，显示新的当前值（降透明度）
+- 如有下拉列表，自动关闭
+
+### 交互规则
+- 输入框获得焦点 → 显示下拉/建议列表（如有）
+- 输入内容变化 → 实时过滤列表
+- 点击外部或按 Enter → 关闭下拉列表
+- 切换数据源（如切换 Figma 选中节点）→ 自动清空输入框
 
 ## 项目结构
 

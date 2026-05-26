@@ -102,7 +102,22 @@ final class FigmaAPI: @unchecked Sendable {
 
     nonisolated func setFontSize(_ v: Double) async -> Bool { await textCmd("n.fontSize=\(v)") }
     nonisolated func setFontFamily(_ family: String, _ style: String) async -> Bool {
-        await textCmd("n.fontName={family:\"\(family)\",style:\"\(style)\"}")
+        // 安全转义字体名中的特殊字符
+        let safeFamily = family.replacingOccurrences(of: "\\", with: "\\\\")
+                               .replacingOccurrences(of: "\"", with: "\\\"")
+        let safeStyle = style.replacingOccurrences(of: "\\", with: "\\\\")
+                             .replacingOccurrences(of: "\"", with: "\\\"")
+        // 加载目标字体（而非当前字体）+ try/catch 兜底
+        let js = """
+        (async()=>{try{var s=figma.currentPage.selection;
+        if(!s||!s.length)return'no';var n=s[0];
+        if(n.type!=='TEXT')return'not';
+        await figma.loadFontAsync({family:"\(safeFamily)",style:"\(safeStyle)"});
+        n.fontName={family:"\(safeFamily)",style:"\(safeStyle)"};return'ok'}
+        catch(e){return'err:'+e.message}})()
+        """
+        let r = await exec(js, ap: true)
+        return r?.contains("ok") ?? false
     }
     nonisolated func setTextAlign(_ a: String) async -> Bool { await textCmd("n.textAlignHorizontal='\(a)'") }
     nonisolated func setLineHeight(_ v: Double) async -> Bool { await textCmd("n.lineHeight={value:\(v),unit:'PIXELS'}") }
