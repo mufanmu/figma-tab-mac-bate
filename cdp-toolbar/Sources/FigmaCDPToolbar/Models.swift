@@ -86,6 +86,7 @@ struct NodeProperties: Codable {
     var fontWeight: String?
     var textAlign: String?
     var lineHeight: Double?
+    var lineHeightUnit: String?
     var letterSpacing: Double?
     var paragraphSpacing: Double?
     var paragraphIndent: Double?

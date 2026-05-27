@@ -121,6 +121,10 @@ final class FigmaAPI: @unchecked Sendable {
     }
     nonisolated func setTextAlign(_ a: String) async -> Bool { await textCmd("n.textAlignHorizontal='\(a)'") }
     nonisolated func setLineHeight(_ v: Double) async -> Bool { await textCmd("n.lineHeight={value:\(v),unit:'PIXELS'}") }
+    nonisolated func setLineHeightAuto() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';var n=s[0];if(n.type!=='TEXT')return'not';n.lineHeight={unit:'AUTO'};return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
     nonisolated func setLetterSpacing(_ v: Double) async -> Bool { await textCmd("n.letterSpacing={value:\(v),unit:'PIXELS'}") }
     nonisolated func setParagraphSpacing(_ v: Double) async -> Bool { await textCmd("n.paragraphSpacing=\(v)") }
     nonisolated func setParagraphIndent(_ v: Double) async -> Bool { await textCmd("n.paragraphIndent=\(v)") }
@@ -162,7 +166,7 @@ final class FigmaAPI: @unchecked Sendable {
         info.fontSize=n.fontSize;
         if(n.fontName){info.fontName=n.fontName.family;info.fontWeight=n.fontName.style}
         info.textAlign=n.textAlignHorizontal;
-        if(n.lineHeight&&n.lineHeight.value!==undefined)info.lineHeight=n.lineHeight.value;
+        if(n.lineHeight){info.lineHeight=n.lineHeight.value;info.lineHeightUnit=n.lineHeight.unit}
         if(n.letterSpacing&&n.letterSpacing.value!==undefined)info.letterSpacing=n.letterSpacing.value;
         info.paragraphSpacing=n.paragraphSpacing||0;
         info.paragraphIndent=n.paragraphIndent||0;

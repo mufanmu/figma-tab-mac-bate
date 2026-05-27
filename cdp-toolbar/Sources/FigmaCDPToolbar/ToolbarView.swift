@@ -16,6 +16,7 @@ struct ToolbarView: View {
     @State private var strokeWeight: Double = 1
     @State private var selectedFontFamily: String = ""
     @State private var selectedFontStyle: String = "Regular"
+    @State private var lineHeightAuto: Bool = false
     @State private var searchText: String = ""
     @State private var showDropdown: Bool = false
     @State private var dismissTask: Task<Void, Never>? = nil
@@ -51,7 +52,9 @@ struct ToolbarView: View {
         if let sc = node.strokeColor { strokeColor = Color(red: sc.r, green: sc.g, blue: sc.b) }
         cornerRadius = node.cornerRadius ?? 0; strokeWeight = node.strokeWeight ?? 1
         if let fs = node.fontSize { fontSize = fs }
-        lineHeight = node.lineHeight ?? 0; letterSpacing = node.letterSpacing ?? 0
+        lineHeightAuto = node.lineHeightUnit == "AUTO"
+        if !lineHeightAuto { lineHeight = node.lineHeight ?? 0 }
+        letterSpacing = node.letterSpacing ?? 0
         paragraphSpacing = node.paragraphSpacing ?? 0; paragraphIndent = node.paragraphIndent ?? 0
         if let fn = node.fontName { selectedFontFamily = fn }
         if let fw = node.fontWeight { selectedFontStyle = fw }
@@ -66,7 +69,8 @@ struct ToolbarView: View {
             NumField(label: "字号", value: $fontSize, range: 1...999, theme: theme, onChange: { Task { _ = await delegate.api.setFontSize(fontSize) } })
             alignButtons(node: node)
             Separator(theme: theme)
-            NumField(label: "行高", value: $lineHeight, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setLineHeight(lineHeight) } })
+            // 行高：输入数字或 "auto" 回车确认
+            LineHeightField(theme: theme, lineHeight: $lineHeight, lineHeightAuto: $lineHeightAuto, api: delegate.api)
             NumField(label: "字距", value: $letterSpacing, range: -100...100, theme: theme, onChange: { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } })
             NumField(label: "段距", value: $paragraphSpacing, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } })
             NumField(label: "缩进", value: $paragraphIndent, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } })
@@ -329,6 +333,7 @@ struct ToolbarView: View {
         let theme: FigmaTheme
         let onChange: () -> Void
         @FocusState private var isFocused: Bool
+        @State private var inputText: String = ""
 
         init(label: String, value: Binding<Double>, range: ClosedRange<Double>, mult: Double = 1, theme: FigmaTheme, onChange: @escaping () -> Void) {
             self.label = label
@@ -342,14 +347,40 @@ struct ToolbarView: View {
         var body: some View {
             HStack(spacing: 2) {
                 Text(label).font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
-                TextField("", value: Binding(get: { value * mult }, set: { value = $0 / mult }), format: .number)
-                    .font(FigmaTokens.fontCaption).frame(width: 34).multilineTextAlignment(.center).textFieldStyle(.plain)
-                    .foregroundColor(theme.ink.opacity(isFocused ? 1 : 0.35))
-                    .focused($isFocused)
-                    .onSubmit { onChange() }
+
+                // ZStack: 占位显示当前值（35%），输入后替换，回车确认
+                ZStack(alignment: .center) {
+                    if inputText.isEmpty {
+                        Text("\(Int(value * mult))")
+                            .font(FigmaTokens.fontCaption)
+                            .foregroundColor(theme.ink.opacity(0.35))
+                            .lineLimit(1)
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $inputText)
+                        .font(FigmaTokens.fontCaption)
+                        .multilineTextAlignment(.center)
+                        .textFieldStyle(.plain)
+                        .foregroundColor(theme.ink)
+                        .focused($isFocused)
+                        .onSubmit {
+                            if let n = Double(inputText) {
+                                let clamped = max(range.lowerBound, min(range.upperBound, n / mult))
+                                value = clamped
+                                onChange()
+                            }
+                            inputText = ""
+                            isFocused = false
+                        }
+                }
+                .frame(width: 34)
+                .onChange(of: isFocused) { _, focused in
+                    if !focused { inputText = "" }
+                }
+
                 VStack(spacing: -3) {
-                    UpDownBtn(icon: "chevron.up") { value = min(value + 1, range.upperBound); onChange() }
-                    UpDownBtn(icon: "chevron.down") { value = max(value - 1, range.lowerBound); onChange() }
+                    UpDownBtn(icon: "chevron.up") { value = min(value + 1, range.upperBound); onChange(); inputText = "" }
+                    UpDownBtn(icon: "chevron.down") { value = max(value - 1, range.lowerBound); onChange(); inputText = "" }
                 }
             }
             .frame(height: 28).padding(.horizontal, 4).background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
@@ -366,6 +397,57 @@ struct ToolbarView: View {
             .buttonStyle(.plain).frame(width: size, height: size)
             .background(active ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
     }}
+
+    /// 行高输入：支持数字或 "auto"
+    private struct LineHeightField: View {
+        let theme: FigmaTheme
+        @Binding var lineHeight: Double
+        @Binding var lineHeightAuto: Bool
+        let api: FigmaAPI
+        @State private var inputText: String = ""
+        @FocusState private var isFocused: Bool
+
+        var body: some View {
+            HStack(spacing: 2) {
+                Text("行高").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
+                ZStack(alignment: .center) {
+                    if inputText.isEmpty {
+                        Text(lineHeightAuto ? "auto" : "\(Int(lineHeight))")
+                            .font(FigmaTokens.fontCaption)
+                            .foregroundColor(theme.ink.opacity(0.35))
+                            .lineLimit(1)
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $inputText)
+                        .font(FigmaTokens.fontCaption)
+                        .multilineTextAlignment(.center)
+                        .textFieldStyle(.plain)
+                        .foregroundColor(theme.ink)
+                        .focused($isFocused)
+                        .onSubmit {
+                            let trimmed = inputText.lowercased().trimmingCharacters(in: .whitespaces)
+                            if trimmed == "auto" {
+                                lineHeightAuto = true
+                                Task { await api.setLineHeightAuto() }
+                            } else if let n = Double(inputText) {
+                                lineHeightAuto = false
+                                lineHeight = max(0, min(999, n))
+                                Task { await api.setLineHeight(lineHeight) }
+                            }
+                            inputText = ""
+                            isFocused = false
+                        }
+                }
+                .frame(width: 34)
+                .onChange(of: isFocused) { _, focused in
+                    if !focused { inputText = "" }
+                }
+            }
+            .frame(height: 28).padding(.horizontal, 4)
+            .background(theme.surfaceSoft)
+            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+        }
+    }
 
     private struct IconBtn: View { let icon: String; let a: () -> Void; var body: some View {
         Button(action: a) { Image(systemName: icon).font(.system(size: 11)) }
