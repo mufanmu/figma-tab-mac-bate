@@ -252,7 +252,7 @@ struct ToolbarView: View {
             ToggleBtn(svg: "underline", system: nil, active: d == "UNDERLINE", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "UNDERLINE" ? "NONE" : "UNDERLINE") }
             }
-            ToggleBtn(svg: nil, system: "strikethrough", active: d == "STRIKETHROUGH", size: 32, theme: theme) {
+            ToggleBtn(svg: "Remove", system: nil, active: d == "STRIKETHROUGH", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
             }
         }
@@ -260,7 +260,7 @@ struct ToolbarView: View {
 
     private func textCasePicker(node: NodeProperties) -> some View {
         let c = node.textCase ?? "ORIGINAL"
-        let caseSvgs: [(String, String)] = [("ORIGINAL","false"), ("UPPER","text caps"), ("LOWER","lowercase"), ("TITLE","title case")]
+        let caseSvgs: [(String, String)] = [("ORIGINAL","Remove"), ("UPPER","text caps"), ("LOWER","lowercase"), ("TITLE","title case")]
         return HStack(spacing: 2) {
             ForEach(caseSvgs, id: \.0) { v, svg in
                 Button { Task { _ = await delegate.api.setTextCase(v) } } label: {

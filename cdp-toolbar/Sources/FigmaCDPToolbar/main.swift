@@ -5,7 +5,7 @@ struct FigmaCDPToolbarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("Figma CDP", systemImage: "paintpalette.fill") {
+        MenuBarExtra {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Figma CDP Toolbar").font(.headline)
                 Text(appDelegate.statusText).font(.caption)
@@ -26,6 +26,18 @@ struct FigmaCDPToolbarApp: App {
                 }
                 Button("退出") { NSApplication.shared.terminate(nil) }
             }.padding().frame(width: 220)
+        } label: {
+            menuBarIcon()
         }.menuBarExtraStyle(.menu)
     }
+}
+
+private func menuBarIcon() -> Image {
+    guard let url = Bundle.module.url(forResource: "Figma logo", withExtension: "svg"),
+          let nsImage = NSImage(contentsOf: url) else {
+        return Image(systemName: "paintpalette.fill")
+    }
+    nsImage.size = NSSize(width: 18, height: 18)
+    nsImage.isTemplate = true
+    return Image(nsImage: nsImage)
 }
