@@ -24,10 +24,10 @@ enum FigmaColors {
 
 enum FigmaTokens {
     // MARK: - 尺寸
-    static let toolbarHeight: CGFloat = 40
-    static let controlHeight: CGFloat = 28
-    static let iconButtonSize: CGFloat = 26
-    static let toggleButtonSize: CGFloat = 24
+    static let toolbarHeight: CGFloat = 44
+    static let controlHeight: CGFloat = 32
+    static let iconButtonSize: CGFloat = 32
+    static let toggleButtonSize: CGFloat = 32
 
     // MARK: - 圆角 (DESIGN.md rounded 规范)
     /// 小控件、chip

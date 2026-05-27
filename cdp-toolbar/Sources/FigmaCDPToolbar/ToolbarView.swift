@@ -231,13 +231,13 @@ struct ToolbarView: View {
 
     private func alignButtons(node: NodeProperties) -> some View {
         let a = node.textAlign ?? "LEFT"
+        let svgMap = ["LEFT":"text align left", "CENTER":"text align center", "RIGHT":"text align right", "JUSTIFIED":"text align justified"]
         return HStack(spacing: 2) {
             ForEach(["LEFT","CENTER","RIGHT","JUSTIFIED"], id: \.self) { t in
-                let icon = switch t { case "LEFT":"text.alignleft"; case "CENTER":"text.aligncenter"; case "RIGHT":"text.alignright"; default:"text.justify" }
                 Button { Task { _ = await delegate.api.setTextAlign(t) } } label: {
-                    Image(systemName: icon).font(.system(size: 10))
+                    toolbarIcon(svgMap[t] ?? "text align left", size: 32)
                 }
-                .buttonStyle(.plain).frame(width: 24, height: 24)
+                .buttonStyle(.plain).frame(width: 32, height: 32)
                 .background(a == t ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             }
         }
@@ -246,10 +246,10 @@ struct ToolbarView: View {
     private func decorationButtons(node: NodeProperties) -> some View {
         let d = node.textDecoration ?? "NONE"
         return HStack(spacing: 2) {
-            ToggleBtn(icon: "underline", active: d == "UNDERLINE", size: 24, theme: theme) {
+            ToggleBtn(svg: "underline", system: nil, active: d == "UNDERLINE", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "UNDERLINE" ? "NONE" : "UNDERLINE") }
             }
-            ToggleBtn(icon: "strikethrough", active: d == "STRIKETHROUGH", size: 24, theme: theme) {
+            ToggleBtn(svg: nil, system: "strikethrough", active: d == "STRIKETHROUGH", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
             }
         }
@@ -257,12 +257,13 @@ struct ToolbarView: View {
 
     private func textCasePicker(node: NodeProperties) -> some View {
         let c = node.textCase ?? "ORIGINAL"
+        let caseSvgs: [(String, String)] = [("ORIGINAL","false"), ("UPPER","text caps"), ("LOWER","lowercase"), ("TITLE","title case")]
         return HStack(spacing: 2) {
-            ForEach(Array(zip(["ORIGINAL","UPPER","LOWER","TITLE"], ["Aa","AA","aa","Aa"])), id: \.0) { v, label in
+            ForEach(caseSvgs, id: \.0) { v, svg in
                 Button { Task { _ = await delegate.api.setTextCase(v) } } label: {
-                    Text(label).font(FigmaTokens.fontBodySmall.weight(.medium))
+                    toolbarIcon(svg, size: 32)
                 }
-                .buttonStyle(.plain).frame(width: 24, height: 24)
+                .buttonStyle(.plain).frame(width: 32, height: 32)
                 .background(c == v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             }
         }
@@ -303,19 +304,19 @@ struct ToolbarView: View {
     // MARK: - Align
 
     private func alignToolbar(node: NodeProperties) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Text("\(node.selectionCount) 个").font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink)
             Separator(theme: theme)
-            IconBtn(icon: "align.horizontal.left") { Task { _ = await delegate.api.alignLeft() } }
-            IconBtn(icon: "align.horizontal.center") { Task { _ = await delegate.api.alignHorizontalCenter() } }
-            IconBtn(icon: "align.horizontal.right") { Task { _ = await delegate.api.alignRight() } }
+            IconBtn(svg: "Align vertical left") { Task { _ = await delegate.api.alignLeft() } }
+            IconBtn(svg: "Align vertical center") { Task { _ = await delegate.api.alignHorizontalCenter() } }
+            IconBtn(svg: "Align vertical right") { Task { _ = await delegate.api.alignRight() } }
             Separator(theme: theme)
-            IconBtn(icon: "align.vertical.top") { Task { _ = await delegate.api.alignTop() } }
-            IconBtn(icon: "align.vertical.center") { Task { _ = await delegate.api.alignVerticalCenter() } }
-            IconBtn(icon: "align.vertical.bottom") { Task { _ = await delegate.api.alignBottom() } }
+            IconBtn(svg: "Align horizontal top") { Task { _ = await delegate.api.alignTop() } }
+            IconBtn(svg: "Align horizontal center") { Task { _ = await delegate.api.alignVerticalCenter() } }
+            IconBtn(svg: "Align horizontal bottom") { Task { _ = await delegate.api.alignBottom() } }
             Separator(theme: theme)
-            IconBtn(icon: "arrow.left.and.right") { Task { _ = await delegate.api.distributeHorizontal() } }
-            IconBtn(icon: "arrow.up.and.down") { Task { _ = await delegate.api.distributeVertical() } }
+            IconBtn(svg: "Distribute horizontal spacing") { Task { _ = await delegate.api.distributeHorizontal() } }
+            IconBtn(svg: "Distribute vertical spacing") { Task { _ = await delegate.api.distributeVertical() } }
         }
     }
 
@@ -392,8 +393,11 @@ struct ToolbarView: View {
             .buttonStyle(.plain).frame(width: 14, height: 10)
     }}
 
-    private struct ToggleBtn: View { let icon: String; let active: Bool; let size: CGFloat; let theme: FigmaTheme; let a: () -> Void; var body: some View {
-        Button(action: a) { Image(systemName: icon).font(.system(size: 10)) }
+    private struct ToggleBtn: View { let svg: String?; let system: String?; let active: Bool; let size: CGFloat; let theme: FigmaTheme; let a: () -> Void; var body: some View {
+        Button(action: a) {
+            if let s = svg { toolbarIcon(s, size: size) }
+            else if let s = system { Image(systemName: s).font(.system(size: 10)) }
+        }
             .buttonStyle(.plain).frame(width: size, height: size)
             .background(active ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
     }}
@@ -449,10 +453,10 @@ struct ToolbarView: View {
         }
     }
 
-    private struct IconBtn: View { let icon: String; let a: () -> Void; var body: some View {
-        Button(action: a) { Image(systemName: icon).font(.system(size: 11)) }
-            .buttonStyle(.plain).frame(width: 26, height: 26)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+    private struct IconBtn: View { let svg: String; let a: () -> Void; var body: some View {
+        Button(action: a) { toolbarIcon(svg, size: 32) }
+            .buttonStyle(.plain).frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
     }}
 
     private var opacitySlider: some View {

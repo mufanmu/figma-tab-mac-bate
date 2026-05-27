@@ -8,6 +8,7 @@ let package = Package(
         .executableTarget(
             name: "FigmaCDPToolbar",
             path: "Sources/FigmaCDPToolbar",
+            resources: [.process("Resources")],
             swiftSettings: [.unsafeFlags(["-parse-as-library"])]
         ),
     ]
