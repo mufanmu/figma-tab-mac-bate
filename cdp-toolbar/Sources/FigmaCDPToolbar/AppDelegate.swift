@@ -100,6 +100,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
 
+    /// 菜单栏手动重连
+    func reconnect() async {
+        statusText = "重新连接中..."
+        api.disconnect()
+        selectedNode = nil
+        viewport = nil
+        panel?.orderOut(nil)
+        await connectAndStartPolling()
+    }
+
     func loadFontsIfNeeded() {
         guard !fontsLoaded else { return }
         fontsLoaded = true

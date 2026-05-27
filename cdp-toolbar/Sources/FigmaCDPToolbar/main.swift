@@ -21,6 +21,9 @@ struct FigmaCDPToolbarApp: App {
                     }
                 }
                 Divider()
+                Button("重新连接") {
+                    Task { await appDelegate.reconnect() }
+                }
                 Button("退出") { NSApplication.shared.terminate(nil) }
             }.padding().frame(width: 220)
         }.menuBarExtraStyle(.menu)
