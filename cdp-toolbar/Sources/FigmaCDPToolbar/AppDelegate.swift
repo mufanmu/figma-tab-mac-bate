@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var canvas: CanvasInfo?
     private var screenHeight: Double = 0
     private var cycleCount: Int = 0
-    private var activeFigmaTitle: String = ""
+    private var emptyCount: Int = 0
 
     let api = FigmaAPI(client: CDPClient())
 
@@ -133,18 +133,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
                 cycleCount += 1
 
-                // 每 100 轮（~800ms）检查前台 Figma 窗口是否变化
-                if cycleCount % 100 == 0 {
-                    if let fw = findFigmaWindow() {
-                        if fw.title != activeFigmaTitle {
-                            activeFigmaTitle = fw.title
-                            let ok = await api.discoverAndConnect()
-                            if ok { canvas = await api.getCanvasInfo() }
-                        }
-                    }
-                }
-
                 let (node, vp) = await api.getState()
+
+                // 当前 target 无选中切 Figma 在前台：尝试跳到另一个 target
+                if node == nil {
+                    emptyCount += 1
+                    if emptyCount == 100 {  // ~1.6s 无选中
+                        emptyCount = 0
+                        let ok = await api.discoverAndSkip(skipURL: api.client.currentURL)
+                        if ok { canvas = await api.getCanvasInfo() }
+                    }
+                } else {
+                    emptyCount = 0
+                }
                 self.selectedNode = node
                 self.viewport = vp
                 if let n = node {
@@ -202,10 +203,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     /// 前台 Figma 窗口信息（位置 + 标题），用于多窗口切换检测
+    /// 前台 Figma 窗口（按 layer 取最上层），用于多窗口切换检测
     private func findFigmaWindow() -> (x: Double, y: Double, w: Double, h: Double, title: String)? {
         guard let list = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
         ) as? [[String: Any]] else { return nil }
+        var best: (x: Double, y: Double, w: Double, h: Double, title: String, layer: Int)? = nil
         for info in list {
             guard let owner = info[kCGWindowOwnerName as String] as? String,
                   owner == "Figma",
@@ -213,9 +216,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                   let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
             else { continue }
             let title = info[kCGWindowName as String] as? String ?? ""
-            return (x, y, w, h, title)
+            let layer = info[kCGWindowLayer as String] as? Int ?? 0
+            if best == nil || layer > best!.layer {
+                best = (x, y, w, h, title, layer)
+            }
         }
-        return nil
+        guard let result = best else { return nil }
+        return (result.x, result.y, result.w, result.h, result.title)
     }
 
     /// 旧版兼容：仅返回位置（被 updatePanelPosition 调用）

@@ -1,6 +1,7 @@
 import Foundation
 
 final class CDPClient: @unchecked Sendable {
+    private(set) var currentURL: String = ""
     private var task: URLSessionWebSocketTask?
     private var session: URLSession?
     private var nextId = 1
@@ -9,6 +10,7 @@ final class CDPClient: @unchecked Sendable {
     private let queue = DispatchQueue(label: "cdp-client")
 
     func connect(to wsURL: String) async -> Bool {
+        currentURL = wsURL
         let s = URLSession(configuration: .default)
         session = s
         guard let url = URL(string: wsURL) else { return false }

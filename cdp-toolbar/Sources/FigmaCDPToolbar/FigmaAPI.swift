@@ -1,11 +1,16 @@
 import Foundation
 
 final class FigmaAPI: @unchecked Sendable {
-    private let client: CDPClient
+    let client: CDPClient
 
     init(client: CDPClient) { self.client = client }
 
     nonisolated func discoverAndConnect(port: Int = 9222) async -> Bool {
+        return await discoverAndSkip(port: port, skipURL: client.currentURL)
+    }
+
+    /// 发现 CDP 目标，跳过指定 URL，连接到第一个其他可用目标
+    nonisolated func discoverAndSkip(port: Int = 9222, skipURL: String) async -> Bool {
         guard let url = URL(string: "http://localhost:\(port)/json") else { return false }
         let targets: [[String: Any]]
         do {
@@ -17,6 +22,7 @@ final class FigmaAPI: @unchecked Sendable {
             let ws = t["webSocketDebuggerUrl"] as? String ?? ""
             if ws.isEmpty || u.contains("shell.html") { continue }
             if u.contains("figma.com/design/") || u.contains("figma.com/file/") || u.contains("figma.com/board/") {
+                if ws == skipURL { continue }
                 return await client.connect(to: ws)
             }
         }
