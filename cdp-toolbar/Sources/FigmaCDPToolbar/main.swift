@@ -27,13 +27,14 @@ struct FigmaCDPToolbarApp: App {
                 Button("退出") { NSApplication.shared.terminate(nil) }
             }.padding().frame(width: 220)
         } label: {
-            menuBarIcon()
+            menuBarIcon(reconnecting: appDelegate.isReconnecting)
         }.menuBarExtraStyle(.menu)
     }
 }
 
-private func menuBarIcon() -> Image {
-    guard let url = Bundle.module.url(forResource: "Figma logo", withExtension: "svg"),
+private func menuBarIcon(reconnecting: Bool) -> Image {
+    let name = reconnecting ? "Upload" : "Figma logo"
+    guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
           let nsImage = NSImage(contentsOf: url) else {
         return Image(systemName: "paintpalette.fill")
     }

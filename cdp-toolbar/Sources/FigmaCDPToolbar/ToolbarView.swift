@@ -252,7 +252,7 @@ struct ToolbarView: View {
             ToggleBtn(svg: "underline", system: nil, active: d == "UNDERLINE", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "UNDERLINE" ? "NONE" : "UNDERLINE") }
             }
-            ToggleBtn(svg: "Remove", system: nil, active: d == "STRIKETHROUGH", size: 32, theme: theme) {
+            ToggleBtn(svg: "false", system: nil, active: d == "STRIKETHROUGH", size: 32, theme: theme) {
                 Task { _ = await delegate.api.setTextDecoration(d == "STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
             }
         }

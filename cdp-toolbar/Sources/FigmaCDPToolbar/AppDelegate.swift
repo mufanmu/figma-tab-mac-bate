@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published var fonts: [FontInfo] = []
     @Published var fontsLoaded = false
     @Published var fontLoadCount = 0
+    @Published var isReconnecting = false
 
     private var panel: NSPanel?
     private var pollingTask: Task<Void, Never>?
@@ -102,12 +103,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     /// 菜单栏手动重连
     func reconnect() async {
+        isReconnecting = true
         statusText = "重新连接中..."
         api.disconnect()
         selectedNode = nil
         viewport = nil
         panel?.orderOut(nil)
         await connectAndStartPolling()
+        isReconnecting = false
     }
 
     func loadFontsIfNeeded() {
