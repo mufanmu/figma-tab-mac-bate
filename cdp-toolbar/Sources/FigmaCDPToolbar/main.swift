@@ -27,18 +27,28 @@ struct FigmaCDPToolbarApp: App {
                 Button("退出") { NSApplication.shared.terminate(nil) }
             }.padding().frame(width: 220)
         } label: {
-            menuBarIcon(reconnecting: appDelegate.isReconnecting)
+            MenuBarLabel(delegate: appDelegate)
         }.menuBarExtraStyle(.menu)
     }
 }
 
-private func menuBarIcon(reconnecting: Bool) -> Image {
-    let name = reconnecting ? "Upload" : "Figma logo"
-    guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
-          let nsImage = NSImage(contentsOf: url) else {
-        return Image(systemName: "paintpalette.fill")
+private struct MenuBarLabel: View {
+    @ObservedObject var delegate: AppDelegate
+
+    var body: some View {
+        let name = delegate.isReconnecting ? "Upload" : "Figma logo"
+        if let url = Bundle.module.url(forResource: name, withExtension: "svg"),
+           let nsImage = loadSVG(url: url, size: 18) {
+            Image(nsImage: nsImage)
+        } else {
+            Image(systemName: "paintpalette.fill")
+        }
     }
-    nsImage.size = NSSize(width: 18, height: 18)
+}
+
+private func loadSVG(url: URL, size: CGFloat) -> NSImage? {
+    guard let nsImage = NSImage(contentsOf: url) else { return nil }
+    nsImage.size = NSSize(width: size, height: size)
     nsImage.isTemplate = true
-    return Image(nsImage: nsImage)
+    return nsImage
 }
