@@ -66,14 +66,14 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             fontPicker(node: node)
             Separator(theme: theme)
-            NumField(label: "字号", value: $fontSize, range: 1...999, theme: theme, onChange: { Task { _ = await delegate.api.setFontSize(fontSize) } })
+            NumField(label: "字号", labelIcon: "text font size", value: $fontSize, range: 1...999, theme: theme, onChange: { Task { _ = await delegate.api.setFontSize(fontSize) } })
             alignButtons(node: node)
             Separator(theme: theme)
             // 行高：输入数字或 "auto" 回车确认
             LineHeightField(theme: theme, lineHeight: $lineHeight, lineHeightAuto: $lineHeightAuto, api: delegate.api)
-            NumField(label: "字距", value: $letterSpacing, range: -100...100, theme: theme, onChange: { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } })
-            NumField(label: "段距", value: $paragraphSpacing, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } })
-            NumField(label: "缩进", value: $paragraphIndent, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } })
+            NumField(label: "字距", labelIcon: "text letter spacing", value: $letterSpacing, range: -100...100, theme: theme, onChange: { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } })
+            NumField(label: "段距", labelIcon: "text paragraph spacing", value: $paragraphSpacing, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } })
+            NumField(label: "缩进", labelIcon: "text paragraph indent", value: $paragraphIndent, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } })
             Separator(theme: theme)
             decorationButtons(node: node)
             textCasePicker(node: node)
@@ -95,22 +95,25 @@ struct ToolbarView: View {
 
     private func fontPicker(node: NodeProperties) -> some View {
         HStack(spacing: 3) {
-            // 搜索输入框
-            ZStack(alignment: .leading) {
-                if searchText.isEmpty {
-                    Text(selectedFontFamily.isEmpty ? "字体" : selectedFontFamily)
+            // 搜索输入框（带字体图标）
+            HStack(spacing: 4) {
+                toolbarIcon("Style Text", size: 28).foregroundColor(searchText.isEmpty ? theme.ink.opacity(0.35) : theme.ink)
+                ZStack(alignment: .leading) {
+                    if searchText.isEmpty {
+                        Text(selectedFontFamily.isEmpty ? "字体" : selectedFontFamily)
+                            .font(FigmaTokens.fontBody)
+                            .foregroundColor(theme.ink.opacity(0.35))
+                            .lineLimit(1)
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $searchText)
                         .font(FigmaTokens.fontBody)
-                        .foregroundColor(theme.ink.opacity(0.35))
-                        .lineLimit(1)
-                        .allowsHitTesting(false)
+                        .foregroundColor(theme.ink)
+                        .textFieldStyle(.plain)
+                        .focused($isSearchFocused)
                 }
-                TextField("", text: $searchText)
-                    .font(FigmaTokens.fontBody)
-                    .foregroundColor(theme.ink)
-                    .textFieldStyle(.plain)
-                    .focused($isSearchFocused)
             }
-            .frame(width: 130)
+            .frame(width: 150)
             .padding(.horizontal, 6)
             .frame(height: 28)
             .background(theme.surfaceSoft)
@@ -328,6 +331,7 @@ struct ToolbarView: View {
 
     private struct NumField: View {
         let label: String
+        let labelIcon: String?
         @Binding var value: Double
         let range: ClosedRange<Double>
         let mult: Double
@@ -336,8 +340,9 @@ struct ToolbarView: View {
         @FocusState private var isFocused: Bool
         @State private var inputText: String = ""
 
-        init(label: String, value: Binding<Double>, range: ClosedRange<Double>, mult: Double = 1, theme: FigmaTheme, onChange: @escaping () -> Void) {
+        init(label: String, labelIcon: String? = nil, value: Binding<Double>, range: ClosedRange<Double>, mult: Double = 1, theme: FigmaTheme, onChange: @escaping () -> Void) {
             self.label = label
+            self.labelIcon = labelIcon
             self._value = value
             self.range = range
             self.mult = mult
@@ -347,7 +352,11 @@ struct ToolbarView: View {
 
         var body: some View {
             HStack(spacing: 2) {
-                Text(label).font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
+                if let icon = labelIcon {
+                    toolbarIcon(icon, size: 20).foregroundColor(theme.ink)
+                } else {
+                    Text(label).font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
+                }
 
                 // ZStack: 占位显示当前值（35%），输入后替换，回车确认
                 ZStack(alignment: .center) {
@@ -413,7 +422,7 @@ struct ToolbarView: View {
 
         var body: some View {
             HStack(spacing: 2) {
-                Text("行高").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
+                toolbarIcon("text line height", size: 20).foregroundColor(theme.ink)
                 ZStack(alignment: .center) {
                     if inputText.isEmpty {
                         Text(lineHeightAuto ? "auto" : "\(Int(lineHeight))")
