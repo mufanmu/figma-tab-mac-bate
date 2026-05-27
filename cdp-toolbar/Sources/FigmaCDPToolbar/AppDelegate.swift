@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var canvas: CanvasInfo?
     private var screenHeight: Double = 0
+    private var cycleCount: Int = 0
+    private var activeFigmaTitle: String = ""
 
     let api = FigmaAPI(client: CDPClient())
 
@@ -129,6 +131,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                     continue
                 }
 
+                cycleCount += 1
+
+                // 每 100 轮（~800ms）检查前台 Figma 窗口是否变化
+                if cycleCount % 100 == 0 {
+                    if let fw = findFigmaWindow() {
+                        if fw.title != activeFigmaTitle {
+                            activeFigmaTitle = fw.title
+                            let ok = await api.discoverAndConnect()
+                            if ok { canvas = await api.getCanvasInfo() }
+                        }
+                    }
+                }
+
                 let (node, vp) = await api.getState()
                 self.selectedNode = node
                 self.viewport = vp
@@ -186,7 +201,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.orderFront(nil)
     }
 
-    private func findFigmaWindowQuartz() -> (x: Double, y: Double, w: Double, h: Double)? {
+    /// 前台 Figma 窗口信息（位置 + 标题），用于多窗口切换检测
+    private func findFigmaWindow() -> (x: Double, y: Double, w: Double, h: Double, title: String)? {
         guard let list = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
         ) as? [[String: Any]] else { return nil }
@@ -196,9 +212,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                   let b = info[kCGWindowBounds as String] as? [String: Double],
                   let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
             else { continue }
-            return (x, y, w, h)
+            let title = info[kCGWindowName as String] as? String ?? ""
+            return (x, y, w, h, title)
         }
         return nil
+    }
+
+    /// 旧版兼容：仅返回位置（被 updatePanelPosition 调用）
+    private func findFigmaWindowQuartz() -> (x: Double, y: Double, w: Double, h: Double)? {
+        guard let fw = findFigmaWindow() else { return nil }
+        return (fw.x, fw.y, fw.w, fw.h)
     }
 }
 
