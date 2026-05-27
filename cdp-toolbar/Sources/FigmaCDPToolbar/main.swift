@@ -36,7 +36,7 @@ private struct MenuBarLabel: View {
     @ObservedObject var delegate: AppDelegate
 
     var body: some View {
-        let name = delegate.isReconnecting ? "Upload" : "Figma logo"
+        let name = delegate.isReconnecting ? "Refresh" : "Figma logo"
         if let url = Bundle.module.url(forResource: name, withExtension: "svg"),
            let nsImage = loadSVG(url: url, size: 18) {
             Image(nsImage: nsImage)
