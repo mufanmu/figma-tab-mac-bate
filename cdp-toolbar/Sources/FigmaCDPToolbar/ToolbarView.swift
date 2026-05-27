@@ -79,8 +79,7 @@ struct ToolbarView: View {
             textCasePicker(node: node)
             autoResizePicker(node: node)
             Separator(theme: theme)
-            ColorPicker("", selection: $fillColor).labelsHidden().frame(width: 22).scaleEffect(0.75)
-                .onChange(of: fillColor) { _, c in applyFill(c) }
+            ColorPicker("", selection: Binding(get: { fillColor }, set: { fillColor = $0; applyFill($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
             opacitySlider
         }
     }
@@ -286,12 +285,10 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             Text(node.name.prefix(14)).font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink).lineLimit(1)
             Separator(theme: theme)
-            ColorPicker("", selection: $fillColor).labelsHidden().frame(width: 22).scaleEffect(0.75)
-                .onChange(of: fillColor) { _, c in applyFill(c) }
+            ColorPicker("", selection: Binding(get: { fillColor }, set: { fillColor = $0; applyFill($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
             NumField(label: "不透明", value: $opacityValue, range: 0...1, mult: 100, theme: theme, onChange: { Task { _ = await delegate.api.setOpacity(opacityValue) } })
             Separator(theme: theme)
-            ColorPicker("", selection: $strokeColor).labelsHidden().frame(width: 22).scaleEffect(0.75)
-                .onChange(of: strokeColor) { _, c in applyStroke(c) }
+            ColorPicker("", selection: Binding(get: { strokeColor }, set: { strokeColor = $0; applyStroke($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
             NumField(label: "粗细", value: $strokeWeight, range: 0...100, theme: theme, onChange: { Task { _ = await delegate.api.setStrokeWeight(strokeWeight) } })
             NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
             Spacer()
@@ -466,8 +463,7 @@ struct ToolbarView: View {
     private var opacitySlider: some View {
         HStack(spacing: 2) {
             Image(systemName: "circle.lefthalf.filled").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
-            Slider(value: $opacityValue, in: 0...1).frame(width: 40)
-                .onChange(of: opacityValue) { _, v in Task { _ = await delegate.api.setOpacity(v) } }
+            Slider(value: Binding(get: { opacityValue }, set: { newVal in opacityValue = newVal; Task { _ = await delegate.api.setOpacity(newVal) } }), in: 0...1).frame(width: 40)
             Text("\(Int(opacityValue * 100))%").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink).frame(width: 24)
         }
     }
