@@ -158,15 +158,17 @@ struct ToolbarView: View {
                                             HStack {
                                                 Text(f.family)
                                                     .font(FigmaTokens.fontBody)
-                                                    .foregroundColor(theme.ink)
+                                                    .foregroundColor(f.family == selectedFontFamily ? FigmaColors.accentBlue : theme.ink)
                                                 Spacer()
                                                 if f.family == selectedFontFamily {
                                                     Image(systemName: "checkmark")
                                                         .font(FigmaTokens.fontBodySmall)
+                                                        .foregroundColor(FigmaColors.accentBlue)
                                                 }
                                             }
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 5)
+                                            .background(f.family == selectedFontFamily ? FigmaColors.accentBlue.opacity(0.1) : Color.clear)
                                             .contentShape(Rectangle())
                                         }
                                         .buttonStyle(.plain)

@@ -18,6 +18,8 @@ enum FigmaColors {
     static let shadow = Color.black.opacity(0.06)
     /// 覆盖层 scrim (黑 ~60% opacity)
     static let overlayScrim = Color.black.opacity(0.6)
+    /// Figma 产品 UI 蓝色 — 选中项标识
+    static let accentBlue = Color(hex: "0D99FF")
 }
 
 enum FigmaTokens {
