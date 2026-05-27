@@ -131,6 +131,11 @@ final class FigmaAPI: @unchecked Sendable {
         let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';var n=s[0];if(n.type!=='TEXT')return'not';n.lineHeight={unit:'AUTO'};return'ok'})()")
         return r?.contains("ok") ?? false
     }
+
+    nonisolated func clearSelection() async -> Bool {
+        let r = await exec("(()=>{figma.currentPage.selection=[];return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
     nonisolated func setLetterSpacing(_ v: Double) async -> Bool { await textCmd("n.letterSpacing={value:\(v),unit:'PIXELS'}") }
     nonisolated func setParagraphSpacing(_ v: Double) async -> Bool { await textCmd("n.paragraphSpacing=\(v)") }
     nonisolated func setParagraphIndent(_ v: Double) async -> Bool { await textCmd("n.paragraphIndent=\(v)") }

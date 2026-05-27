@@ -15,18 +15,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var canvas: CanvasInfo?
     private var screenHeight: Double = 0
-    private var cycleCount: Int = 0
-    private var emptyCount: Int = 0
+    private var clickMonitor: Any?
+    /// 点击窗口编号变化时设置此标志，轮询循环内执行重连
+    private var pendingReconnect = false
 
     let api = FigmaAPI(client: CDPClient())
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         screenHeight = Double(NSScreen.main?.frame.height ?? 1055)
         setupPanel()
+        setupClickMonitor()
         Task { await connectAndStartPolling() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if let m = clickMonitor { NSEvent.removeMonitor(m) }
         pollingTask?.cancel()
         api.disconnect()
     }
@@ -54,6 +57,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.contentView = hostingView
         panel.orderFront(nil)
         self.panel = panel
+    }
+
+    /// 安全区域高度：Figma 窗口顶部 64px，点击此处 = 点击空白处
+    private let safeAreaHeight: CGFloat = 72
+
+    /// 全局鼠标点击监听：点击 Figma 窗口顶部安全区域时标记 pendingReconnect
+    private func setupClickMonitor() {
+        clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            guard let self = self else { return }
+            let pos = NSEvent.mouseLocation
+            // 检查点击是否在任一 Figma 窗口的顶部安全区域内
+            guard let list = CGWindowListCopyWindowInfo(
+                [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+            ) as? [[String: Any]] else { return }
+            for info in list {
+                guard let owner = info[kCGWindowOwnerName as String] as? String,
+                      owner == "Figma",
+                      let b = info[kCGWindowBounds as String] as? [String: Double],
+                      let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
+                else { continue }
+                // CGWindow 左下角原点，顶部 = y + h
+                if pos.x >= x && pos.x <= x + w && pos.y >= y + h - safeAreaHeight && pos.y <= y + h {
+                    self.pendingReconnect = true
+                    return
+                }
+            }
+        }
     }
 
     private func connectAndStartPolling() async {
@@ -131,21 +161,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                     continue
                 }
 
-                cycleCount += 1
+                // 点击虚拟空白处 → 取消选中 + 切换到另一个 target
+                if pendingReconnect {
+                    pendingReconnect = false
+                    _ = await api.clearSelection()
+                    selectedNode = nil
+                    viewport = nil
+                    panel?.orderOut(nil)
+                    let ok = await api.discoverAndSkip(skipURL: api.client.currentURL)
+                    if ok { canvas = await api.getCanvasInfo() }
+                }
 
                 let (node, vp) = await api.getState()
-
-                // 当前 target 无选中切 Figma 在前台：尝试跳到另一个 target
-                if node == nil {
-                    emptyCount += 1
-                    if emptyCount == 100 {  // ~1.6s 无选中
-                        emptyCount = 0
-                        let ok = await api.discoverAndSkip(skipURL: api.client.currentURL)
-                        if ok { canvas = await api.getCanvasInfo() }
-                    }
-                } else {
-                    emptyCount = 0
-                }
                 self.selectedNode = node
                 self.viewport = vp
                 if let n = node {
@@ -202,33 +229,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.orderFront(nil)
     }
 
-    /// 前台 Figma 窗口信息（位置 + 标题），用于多窗口切换检测
-    /// 前台 Figma 窗口（按 layer 取最上层），用于多窗口切换检测
-    private func findFigmaWindow() -> (x: Double, y: Double, w: Double, h: Double, title: String)? {
+    /// 前台 Figma 窗口（按 layer 取最上层）
+    private func findFigmaWindow() -> (x: Double, y: Double, w: Double, h: Double)? {
         guard let list = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
         ) as? [[String: Any]] else { return nil }
-        var best: (x: Double, y: Double, w: Double, h: Double, title: String, layer: Int)? = nil
+        var best: (x: Double, y: Double, w: Double, h: Double, layer: Int)? = nil
         for info in list {
             guard let owner = info[kCGWindowOwnerName as String] as? String,
                   owner == "Figma",
                   let b = info[kCGWindowBounds as String] as? [String: Double],
                   let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
             else { continue }
-            let title = info[kCGWindowName as String] as? String ?? ""
             let layer = info[kCGWindowLayer as String] as? Int ?? 0
             if best == nil || layer > best!.layer {
-                best = (x, y, w, h, title, layer)
+                best = (x, y, w, h, layer)
             }
         }
         guard let result = best else { return nil }
-        return (result.x, result.y, result.w, result.h, result.title)
+        return (result.x, result.y, result.w, result.h)
     }
 
-    /// 旧版兼容：仅返回位置（被 updatePanelPosition 调用）
     private func findFigmaWindowQuartz() -> (x: Double, y: Double, w: Double, h: Double)? {
         guard let fw = findFigmaWindow() else { return nil }
         return (fw.x, fw.y, fw.w, fw.h)
+    }
+
+    /// 返回指定坐标所在的 Figma 窗口编号
+    private func figmaWindowAt(_ point: CGPoint) -> Int? {
+        guard let list = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+        ) as? [[String: Any]] else { return nil }
+        for info in list {
+            guard let owner = info[kCGWindowOwnerName as String] as? String,
+                  owner == "Figma",
+                  let b = info[kCGWindowBounds as String] as? [String: Double],
+                  let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"]
+            else { continue }
+            if point.x >= x && point.x <= x + w && point.y >= y && point.y <= y + h {
+                return info[kCGWindowNumber as String] as? Int
+            }
+        }
+        return nil
     }
 }
 
