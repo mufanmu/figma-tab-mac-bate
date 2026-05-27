@@ -18,6 +18,7 @@ struct ToolbarView: View {
     @State private var selectedFontStyle: String = "Regular"
     @State private var searchText: String = ""
     @State private var showDropdown: Bool = false
+    @State private var dismissTask: Task<Void, Never>? = nil
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -80,8 +81,11 @@ struct ToolbarView: View {
         }
     }
 
+    /// 搜索时全量过滤；未搜索时仅显示已加载的部分（fontLoadCount）
     private var filteredFonts: [FontInfo] {
-        guard !searchText.isEmpty else { return delegate.fonts }
+        guard !searchText.isEmpty else {
+            return Array(delegate.fonts.prefix(delegate.fontLoadCount))
+        }
         return delegate.fonts.filter { $0.family.localizedCaseInsensitiveContains(searchText) }
     }
 
@@ -133,7 +137,7 @@ struct ToolbarView: View {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 LazyVStack(spacing: 0) {
-                                    ForEach(items, id: \.family) { f in
+                                    ForEach(Array(items.enumerated()), id: \.element.family) { idx, f in
                                         Button {
                                             let family = f.family
                                             let style = f.styles.first ?? "Regular"
@@ -141,7 +145,12 @@ struct ToolbarView: View {
                                             selectedFontFamily = family
                                             selectedFontStyle = style
                                             searchText = ""
-                                            showDropdown = false
+                                            // 延迟关闭 popover 以掩盖 CDP 延迟
+                                            dismissTask?.cancel()
+                                            dismissTask = Task { @MainActor in
+                                                try? await Task.sleep(nanoseconds: 300_000_000)
+                                                showDropdown = false
+                                            }
                                             Task { @MainActor in
                                                 _ = await api.setFontFamily(family, style)
                                             }
@@ -162,10 +171,16 @@ struct ToolbarView: View {
                                         }
                                         .buttonStyle(.plain)
                                         Divider().opacity(0)
+                                        // 距底部 30 个时预加载下一组 50
+                                        .onAppear {
+                                            if idx >= items.count - 30 && searchText.isEmpty {
+                                                delegate.loadMoreFonts()
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            .frame(height: min(CGFloat(items.count) * 30, 180))
+                            .frame(height: min(CGFloat(items.count) * 30, 300))
                             .onAppear {
                                 if !selectedFontFamily.isEmpty {
                                     proxy.scrollTo(selectedFontFamily, anchor: .center)
@@ -199,7 +214,7 @@ struct ToolbarView: View {
         }
         .onChange(of: isSearchFocused) { _, focused in
             if focused && searchText.isEmpty {
-                delegate.loadAllFontsForSearch()
+                delegate.loadFontsIfNeeded()
                 showDropdown = true
             }
         }
