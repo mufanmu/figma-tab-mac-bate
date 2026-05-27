@@ -195,9 +195,10 @@ struct ToolbarView: View {
                 .padding(.vertical, 4)
             }
 
-            // 样式选择
+            // 样式选择（仅一种样式时不可点击）
+            let fontStyles = delegate.fonts.first(where: { $0.family == selectedFontFamily })?.styles ?? []
             Menu {
-                ForEach(delegate.fonts.first(where: { $0.family == selectedFontFamily })?.styles ?? [], id: \.self) { s in
+                ForEach(fontStyles, id: \.self) { s in
                     Button {
                         selectedFontStyle = s
                         Task { await delegate.api.setFontFamily(selectedFontFamily, s) }
@@ -206,8 +207,10 @@ struct ToolbarView: View {
             } label: {
                 Text(selectedFontStyle).font(FigmaTokens.fontBodySmall).lineLimit(1)
                     .frame(width: 75, alignment: .leading)
+                    .opacity(fontStyles.count <= 1 ? 0.35 : 1)
             }
             .menuStyle(.borderlessButton).frame(width: 80)
+            .disabled(fontStyles.count <= 1)
         }
         .onChange(of: searchText) { _, newValue in
             if !newValue.isEmpty {
