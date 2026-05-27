@@ -34,8 +34,8 @@ struct ToolbarView: View {
                 }
             }
         }
-        .fixedSize()
         .padding(.horizontal, 8).padding(.vertical, 6)
+        .frame(width: 1250)
         .background(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd).fill(theme.canvas).shadow(color: theme.shadow, radius: 8, y: 2))
         .overlay(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd).stroke(theme.hairline, lineWidth: 1))
         .onChange(of: delegate.selectedNode?.id ?? "") { _, _ in
@@ -224,12 +224,7 @@ struct ToolbarView: View {
                 showDropdown = true
             }
         }
-        .onChange(of: isSearchFocused) { _, focused in
-            if focused && searchText.isEmpty {
-                delegate.loadFontsIfNeeded()
-                showDropdown = true
-            }
-        }
+        // 不自动展开：只在点击搜索区域时通过 overlay onTapGesture 打开
     }
 
     private func alignButtons(node: NodeProperties) -> some View {

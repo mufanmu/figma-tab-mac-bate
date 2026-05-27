@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func setupPanel() {
         let panel = FloatingPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 56),
+            contentRect: NSRect(x: 0, y: 0, width: 1250, height: 56),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: false
         )
@@ -54,7 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let hostingView = ToolbarHostingView(
             rootView: ToolbarView(delegate: self).environmentObject(self)
         )
-        hostingView.setFrameSize(NSSize(width: 400, height: 56))
+        // 固定 1250px 宽度，确保所有工具栏控件完整显示
+        hostingView.setFrameSize(NSSize(width: 1250, height: 56))
         panel.contentView = hostingView
         panel.orderFront(nil)
         self.panel = panel
@@ -226,18 +227,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let titleBarH = max(0, fw.h - canvas.height)
         let qx = fw.x + domX
         let qy = fw.y + titleBarH + domY
-        let cocoaX = qx - panel.frame.width / 2
-        let cocoaY = isBelow ? screenHeight - qy - panel.frame.height : screenHeight - qy
+        let cocoaY = isBelow ? screenHeight - qy - 56 : screenHeight - qy
 
-        let idealSize = panel.contentView?.fittingSize ?? NSSize(width: 300, height: 56)
-        let newWidth = min(idealSize.width, 1200)
-        if abs(panel.frame.width - newWidth) > 5 {
-            let oldWidth = panel.frame.width
-            panel.setContentSize(NSSize(width: newWidth, height: 56))
-            panel.setFrameOrigin(NSPoint(x: cocoaX + (oldWidth - newWidth) / 2, y: cocoaY))
-        } else {
-            panel.setFrameOrigin(NSPoint(x: cocoaX, y: cocoaY))
-        }
+        panel.setFrame(NSRect(x: qx - 625, y: cocoaY, width: 1250, height: 56), display: false)
 
         panel.orderFront(nil)
     }

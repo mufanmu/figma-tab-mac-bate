@@ -41,6 +41,11 @@ Figma Editor JS Context
 ### 4. Goal-Driven Execution
 - 编码前定义可验证的成功标准
 
+### 5. 中文沟通
+- 所有思考过程、问题分析、方案讨论均使用中文
+- 代码、注释、日志保持英文不变
+- 方便用户即时理解思路，无需翻译
+
 ## Key Technical Details
 
 ### CDP 通道
@@ -107,8 +112,45 @@ cdp-toolbar/
     └── DesignTokens.swift   # 设计系统
 ```
 
+## 工具栏布局约束（CRITICAL）
+
+### 固定宽度：1250px
+
+工具栏使用 `.frame(width: 1250)` 固定宽度，**禁止使用 `.fixedSize()` 或自适应宽度方案**。
+
+**原因：** `.fixedSize()` 在 NSHostingView 中会导致 SwiftUI 内部坐标映射偏移，造成 hit-test 区域与视觉渲染位置不一致（点击按钮右侧会触发相邻按钮）。固定宽度可以完全避免这个问题。
+
+### 修改布局时的检查清单
+
+增加、删除、调整工具栏控件（按钮、输入框、分隔符等）后，**必须检查实际总宽度**：
+
+1. 控件宽度估算（大约值）：
+   - `fontPicker`: ~230px
+   - `NumField`: ~60px
+   - `LineHeightField`: ~60px
+   - 对齐按钮组（4 个 32px + 间距）: ~134px
+   - `decorationButtons`（2 个 32px + 间距）: ~66px
+   - `textCasePicker`（4 个 32px + 间距）: ~134px
+   - `autoResizePicker`（3 个 24px + 间距）: ~76px
+   - `ColorPicker`（scaleEffect 0.75）: ~17px
+   - `Separator`: 1px
+   - `opacitySlider`: ~90px
+
+2. HStack spacing: `spacing: 6`（textToolbar）/ `spacing: 4`（alignToolbar）
+
+3. 容器 padding: `.padding(.horizontal, 8)` = 左右各 8px
+
+4. **确保总宽度 ≤ 1250px。如果超出，调整 `.frame(width:)` 的值，同步修改以下三处：**
+   - `ToolbarView.swift` → `.frame(width: N)`
+   - `AppDelegate.swift` → `setupPanel()` → `contentRect` 和 `hostingView.setFrameSize`
+   - `AppDelegate.swift` → `updatePanelPosition()` → `panel.setFrame` 中的 `qx - N/2` 和宽度值
+
+### 已知问题：`.fixedSize()` + NSHostingView = 点击偏移
+
+经过多次实验确认：任何形式的 `.fixedSize()`（包括搭配 `.frame(alignment:)`、`clipsToBounds`、固定 1200px NSHostingView + 面板裁剪、`intrinsicContentSize` 等方案）在 NSHostingView 中都会导致 hit-test 坐标系偏移。**唯一可靠方案是 `.frame(width: 固定值)`。**
+
 ## 构建 & 运行
 
 ```bash
-cd cdp-toolbar && swift build && .build/debug/FigmaCDPToolbar &
+swift build --package-path cdp-toolbar && cdp-toolbar/.build/debug/FigmaCDPToolbar &
 ```
