@@ -63,13 +63,13 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             fontPicker(node: node)
             Separator(theme: theme)
-            NumField("字号", value: $fontSize, range: 1...999) { Task { _ = await delegate.api.setFontSize(fontSize) } }
+            NumField(label: "字号", value: $fontSize, range: 1...999, theme: theme, onChange: { Task { _ = await delegate.api.setFontSize(fontSize) } })
             alignButtons(node: node)
             Separator(theme: theme)
-            NumField("行高", value: $lineHeight, range: 0...999) { Task { _ = await delegate.api.setLineHeight(lineHeight) } }
-            NumField("字距", value: $letterSpacing, range: -100...100) { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } }
-            NumField("段距", value: $paragraphSpacing, range: 0...999) { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } }
-            NumField("缩进", value: $paragraphIndent, range: 0...999) { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } }
+            NumField(label: "行高", value: $lineHeight, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setLineHeight(lineHeight) } })
+            NumField(label: "字距", value: $letterSpacing, range: -100...100, theme: theme, onChange: { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } })
+            NumField(label: "段距", value: $paragraphSpacing, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } })
+            NumField(label: "缩进", value: $paragraphIndent, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } })
             Separator(theme: theme)
             decorationButtons(node: node)
             textCasePicker(node: node)
@@ -285,12 +285,12 @@ struct ToolbarView: View {
             Separator(theme: theme)
             ColorPicker("", selection: $fillColor).labelsHidden().frame(width: 22).scaleEffect(0.75)
                 .onChange(of: fillColor) { _, c in applyFill(c) }
-            NumField("不透明", value: $opacityValue, range: 0...1, mult: 100, fmt: "%.0f%%") { Task { _ = await delegate.api.setOpacity(opacityValue) } }
+            NumField(label: "不透明", value: $opacityValue, range: 0...1, mult: 100, theme: theme, onChange: { Task { _ = await delegate.api.setOpacity(opacityValue) } })
             Separator(theme: theme)
             ColorPicker("", selection: $strokeColor).labelsHidden().frame(width: 22).scaleEffect(0.75)
                 .onChange(of: strokeColor) { _, c in applyStroke(c) }
-            NumField("粗细", value: $strokeWeight, range: 0...100) { Task { _ = await delegate.api.setStrokeWeight(strokeWeight) } }
-            NumField("圆角", value: $cornerRadius, range: 0...999) { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } }
+            NumField(label: "粗细", value: $strokeWeight, range: 0...100, theme: theme, onChange: { Task { _ = await delegate.api.setStrokeWeight(strokeWeight) } })
+            NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
             Spacer()
             opacitySlider
         }
@@ -321,18 +321,39 @@ struct ToolbarView: View {
         Rectangle().fill(theme.hairline).frame(width: 1, height: 26)
     }}
 
-    private func NumField(_ label: String, value: Binding<Double>, range: ClosedRange<Double>, mult: Double = 1, fmt: String = "%.0f", onChange: @escaping () -> Void) -> some View {
-        HStack(spacing: 2) {
-            Text(label).font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
-            TextField("", value: Binding(get: { value.wrappedValue * mult }, set: { value.wrappedValue = $0 / mult }), format: .number)
-                .font(FigmaTokens.fontCaption).frame(width: 34).multilineTextAlignment(.center).textFieldStyle(.plain)
-                .onSubmit { onChange() }
-            VStack(spacing: -3) {
-                UpDownBtn(icon: "chevron.up") { value.wrappedValue = min(value.wrappedValue + 1, range.upperBound); onChange() }
-                UpDownBtn(icon: "chevron.down") { value.wrappedValue = max(value.wrappedValue - 1, range.lowerBound); onChange() }
-            }
+    private struct NumField: View {
+        let label: String
+        @Binding var value: Double
+        let range: ClosedRange<Double>
+        let mult: Double
+        let theme: FigmaTheme
+        let onChange: () -> Void
+        @FocusState private var isFocused: Bool
+
+        init(label: String, value: Binding<Double>, range: ClosedRange<Double>, mult: Double = 1, theme: FigmaTheme, onChange: @escaping () -> Void) {
+            self.label = label
+            self._value = value
+            self.range = range
+            self.mult = mult
+            self.theme = theme
+            self.onChange = onChange
         }
-        .frame(height: 28).padding(.horizontal, 4).background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+
+        var body: some View {
+            HStack(spacing: 2) {
+                Text(label).font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink)
+                TextField("", value: Binding(get: { value * mult }, set: { value = $0 / mult }), format: .number)
+                    .font(FigmaTokens.fontCaption).frame(width: 34).multilineTextAlignment(.center).textFieldStyle(.plain)
+                    .foregroundColor(theme.ink.opacity(isFocused ? 1 : 0.35))
+                    .focused($isFocused)
+                    .onSubmit { onChange() }
+                VStack(spacing: -3) {
+                    UpDownBtn(icon: "chevron.up") { value = min(value + 1, range.upperBound); onChange() }
+                    UpDownBtn(icon: "chevron.down") { value = max(value - 1, range.lowerBound); onChange() }
+                }
+            }
+            .frame(height: 28).padding(.horizontal, 4).background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+        }
     }
 
     private struct UpDownBtn: View { let icon: String; let a: () -> Void; var body: some View {
