@@ -227,9 +227,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let titleBarH = max(0, fw.h - canvas.height)
         let qx = fw.x + domX
         let qy = fw.y + titleBarH + domY
-        let cocoaY = isBelow ? screenHeight - qy - 56 : screenHeight - qy
+        let cocoaY = isBelow ? screenHeight - qy - panel.frame.height : screenHeight - qy
 
-        panel.setFrame(NSRect(x: qx - 625, y: cocoaY, width: 1250, height: 56), display: false)
+        panel.setContentSize(NSSize(width: 1250, height: 56))
+        panel.setFrameOrigin(NSPoint(x: qx - 625, y: cocoaY))
 
         panel.orderFront(nil)
     }
