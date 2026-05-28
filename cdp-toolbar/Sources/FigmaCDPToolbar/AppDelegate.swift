@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func setupPanel() {
         let panel = FloatingPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 1250, height: 56),
+            contentRect: NSRect(x: 0, y: 0, width: 1250, height: 44),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: false
         )
@@ -55,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             rootView: ToolbarView(delegate: self).environmentObject(self)
         )
         // 固定 1250px 宽度，确保所有工具栏控件完整显示
-        hostingView.setFrameSize(NSSize(width: 1250, height: 56))
+        hostingView.setFrameSize(NSSize(width: 1250, height: 44))
         panel.contentView = hostingView
         self.panel = panel
     }
@@ -229,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let qy = fw.y + titleBarH + domY
         let cocoaY = isBelow ? screenHeight - qy - panel.frame.height : screenHeight - qy
 
-        panel.setContentSize(NSSize(width: 1250, height: 56))
+        panel.setContentSize(NSSize(width: 1250, height: 44))
         panel.setFrameOrigin(NSPoint(x: qx - 625, y: cocoaY))
 
         panel.orderFront(nil)

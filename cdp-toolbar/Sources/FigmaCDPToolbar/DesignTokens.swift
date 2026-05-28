@@ -24,27 +24,23 @@ enum FigmaColors {
 
 enum FigmaTokens {
     // MARK: - 尺寸
-    static let toolbarHeight: CGFloat = 44
-    static let controlHeight: CGFloat = 32
-    static let iconButtonSize: CGFloat = 32
-    static let toggleButtonSize: CGFloat = 32
+    static let toolbarHeight: CGFloat = 36
+    static let controlHeight: CGFloat = 24
+    static let iconButtonSize: CGFloat = 24
+    static let toggleButtonSize: CGFloat = 24
+    static let iconSize: CGFloat = 24
 
-    // MARK: - 圆角 (DESIGN.md rounded 规范)
-    /// 小控件、chip
-    static let roundedSm: CGFloat = 6
-    /// 容器、输入框、toolbar 整体
-    static let roundedMd: CGFloat = 8
-    /// 大容器、卡片
-    static let roundedLg: CGFloat = 24
-    /// 药丸按钮
-    static let roundedPill: CGFloat = 50
-    /// 圆形
+    // MARK: - 圆角
+    static let roundedSm: CGFloat = 5
+    static let roundedMd: CGFloat = 6
+    static let roundedLg: CGFloat = 20
+    static let roundedPill: CGFloat = 40
     static let roundedFull: CGFloat = 9999
 
-    // MARK: - 间距 (8px base unit)
-    static let spacingXXS: CGFloat = 4
-    static let spacingXS: CGFloat = 8
-    static let spacingSM: CGFloat = 12
+    // MARK: - 间距
+    static let spacingXXS: CGFloat = 3
+    static let spacingXS: CGFloat = 6
+    static let spacingSM: CGFloat = 9
 
     // MARK: - 字体
     /// figmaMono caption — 标签、数值（10px, monospaced）
@@ -58,7 +54,6 @@ enum FigmaTokens {
     /// figmaSans body small — 较小的正文（10px）
     static let fontBodySmall = Font.system(size: 10, weight: .regular)
     /// 图标尺寸
-    static let iconSize: CGFloat = 10
     static let iconSizeSmall: CGFloat = 8
 }
 
