@@ -48,9 +48,6 @@ struct ToolbarView: View {
                 delegate.loadAllFontsForSearch()
             }
         }
-        .popover(isPresented: $showColorEditor, arrowEdge: .bottom) {
-            colorEditorPopover()
-        }
     }
 
     private func colorEditorPopover() -> some View {
@@ -89,6 +86,14 @@ struct ToolbarView: View {
 
     private func textToolbar(node: NodeProperties) -> some View {
         HStack(spacing: 6) {
+            HStack(spacing:2) {
+                ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
+                ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
+            }
+            .popover(isPresented: $showColorEditor, arrowEdge: .bottom) {
+                colorEditorPopover()
+            }
+            Separator(theme: theme)
             fontPicker(node: node)
             Separator(theme: theme)
             PresetField(labelIcon: "text font size", value: $fontSize, presets: [10, 12, 14, 16, 18, 20, 24, 32], onChange: { v in Task { _ = await delegate.api.setFontSize(v) } }, theme: theme)
@@ -97,15 +102,8 @@ struct ToolbarView: View {
             // 行高：输入数字或 "auto" 回车确认
             LineHeightField(theme: theme, lineHeight: $lineHeight, lineHeightAuto: $lineHeightAuto, api: delegate.api)
             PresetField(labelIcon: "text letter spacing", value: $letterSpacing, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setLetterSpacing(v) } }, theme: theme)
-            PresetField(labelIcon: "text paragraph spacing", value: $paragraphSpacing, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setParagraphSpacing(v) } }, theme: theme)
-            PresetField(labelIcon: "text paragraph indent", value: $paragraphIndent, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setParagraphIndent(v) } }, theme: theme)
             Separator(theme: theme)
-            decorationButtons(node: node)
-            textCasePicker(node: node)
-            autoResizePicker(node: node)
-            Separator(theme: theme)
-            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
-            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
+            settingDropdown(node: node)
         }
     }
 
@@ -297,43 +295,92 @@ struct ToolbarView: View {
         return AlignDropButton(current: node.textAlign ?? "LEFT", api: delegate.api, svgMap: svgMap, theme: theme)
     }
 
-    private func decorationButtons(node: NodeProperties) -> some View {
+    private func settingDropdown(node: NodeProperties) -> some View {
         let d = node.textDecoration ?? "NONE"
-        return HStack(spacing: 2) {
-            ToggleBtn(svg: "underline", system: nil, active: d == "UNDERLINE", size: 32, theme: theme) {
-                Task { _ = await delegate.api.setTextDecoration(d == "UNDERLINE" ? "NONE" : "UNDERLINE") }
-            }
-            ToggleBtn(svg: "false", system: nil, active: d == "STRIKETHROUGH", size: 32, theme: theme) {
-                Task { _ = await delegate.api.setTextDecoration(d == "STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
-            }
-        }
-    }
-
-    private func textCasePicker(node: NodeProperties) -> some View {
         let c = node.textCase ?? "ORIGINAL"
-        let caseSvgs: [(String, String)] = [("ORIGINAL","Remove"), ("UPPER","text caps"), ("LOWER","lowercase"), ("TITLE","title case")]
-        return HStack(spacing: 2) {
-            ForEach(caseSvgs, id: \.0) { v, svg in
-                Button { Task { _ = await delegate.api.setTextCase(v) } } label: {
-                    toolbarIcon(svg, size: 32).foregroundColor(theme.ink)
-                }
-                .buttonStyle(.plain).frame(width: 32, height: 32)
-                .background(c == v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
-            }
-        }
+        let r = node.textAutoResize ?? "NONE"
+        return SettingDropdown(currentD:d, currentC:c, currentR:r,
+            ps: $paragraphSpacing, pi: $paragraphIndent,
+            onPS:{ v in Task{ _=await delegate.api.setParagraphSpacing(v) } },
+            onPI:{ v in Task{ _=await delegate.api.setParagraphIndent(v) } },
+            api:delegate.api, theme:theme)
     }
 
-    private func autoResizePicker(node: NodeProperties) -> some View {
-        let r = node.textAutoResize ?? "NONE"
-        let svgMap = ["NONE":"text Fixed size", "WIDTH_AND_HEIGHT":"text Auto width", "HEIGHT":"text Auto height"]
-        return HStack(spacing: 2) {
-            ForEach(["WIDTH_AND_HEIGHT","HEIGHT","NONE"], id: \.self) { v in
-                Button { Task { _ = await delegate.api.setTextAutoResize(v) } } label: {
-                    toolbarIcon(svgMap[v] ?? "text Fixed size", size: 32).foregroundColor(theme.ink)
+    private struct SettingDropdown: View {
+        let currentD: String; let currentC: String; let currentR: String
+        @Binding var ps: Double; @Binding var pi: Double
+        let onPS: (Double) -> Void; let onPI: (Double) -> Void
+        let api: FigmaAPI; let theme: FigmaTheme
+        @State private var show = false
+        private let svgMap = ["WIDTH_AND_HEIGHT":"text Auto width", "HEIGHT":"text Auto height", "NONE":"text Fixed size"]
+        private let cases: [(String,String)] = [("ORIGINAL","Remove"),("UPPER","text caps"),("LOWER","lowercase"),("TITLE","title case")]
+        var body: some View {
+            Button { show = true } label: {
+                toolbarIcon("Setting", size:32).foregroundColor(theme.ink)
+            }
+            .buttonStyle(.plain).frame(width:32, height:32)
+            .background(theme.hairline).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .onHover { over in if over { show = true } }
+            .popover(isPresented:$show, arrowEdge:.bottom) {
+                VStack(spacing:0) {
+                    Text("装饰").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                        .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,4)
+                    HStack(spacing:2) {
+                        ToggleBtn(svg:"underline", system:nil, active:currentD=="UNDERLINE", size:28, theme:theme) {
+                            Task { _ = await api.setTextDecoration(currentD=="UNDERLINE" ? "NONE" : "UNDERLINE") }
+                        }
+                        ToggleBtn(svg:"false", system:nil, active:currentD=="STRIKETHROUGH", size:28, theme:theme) {
+                            Task { _ = await api.setTextDecoration(currentD=="STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
+                        }
+                    }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
+                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
+                    Text("大小写").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                        .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
+                    HStack(spacing:2) {
+                        let cases:[(String,String)] = [("ORIGINAL","Remove"),("UPPER","text caps"),("LOWER","lowercase"),("TITLE","title case")]
+                        ForEach(cases, id:\.0) { v,svg in
+                            Button { Task { _ = await api.setTextCase(v) } } label: {
+                                toolbarIcon(svg, size:28).foregroundColor(theme.ink)
+                            }
+                            .buttonStyle(.plain).frame(width:28, height:28)
+                            .background(currentC==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                        }
+                    }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
+                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
+                    Text("自动尺寸").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                        .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
+                    HStack(spacing:2) {
+                        ForEach(["WIDTH_AND_HEIGHT","HEIGHT","NONE"], id:\.self) { v in
+                            Button { Task { _ = await api.setTextAutoResize(v) } } label: {
+                                toolbarIcon(svgMap[v] ?? "text Fixed size", size:28).foregroundColor(theme.ink)
+                            }
+                            .buttonStyle(.plain).frame(width:28, height:28)
+                            .background(currentR==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                        }
+                    }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
+                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
+                    Text("段落").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                        .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
+                    HStack(spacing:6) {
+                        toolbarIcon("text paragraph spacing", size:20).foregroundColor(theme.ink)
+                        TextField("0", text:Binding(get:{String(Int(ps))}, set:{if let v=Double($0){ps=v;onPS(ps)}}))
+                            .textFieldStyle(.plain).font(.system(size:11,design:.monospaced)).foregroundColor(.white)
+                            .multilineTextAlignment(.center).frame(width:44, height:22)
+                            .background(Color(red:0.12,green:0.12,blue:0.12)).clipShape(RoundedRectangle(cornerRadius:4))
+                            .overlay(RoundedRectangle(cornerRadius:4).stroke(Color(red:0.24,green:0.24,blue:0.24),lineWidth:1))
+                            .onSubmit { onPS(ps) }
+                        toolbarIcon("text paragraph indent", size:20).foregroundColor(theme.ink)
+                        TextField("0", text:Binding(get:{String(Int(pi))}, set:{if let v=Double($0){pi=v;onPI(pi)}}))
+                            .textFieldStyle(.plain).font(.system(size:11,design:.monospaced)).foregroundColor(.white)
+                            .multilineTextAlignment(.center).frame(width:44, height:22)
+                            .background(Color(red:0.12,green:0.12,blue:0.12)).clipShape(RoundedRectangle(cornerRadius:4))
+                            .overlay(RoundedRectangle(cornerRadius:4).stroke(Color(red:0.24,green:0.24,blue:0.24),lineWidth:1))
+                            .onSubmit { onPI(pi) }
+                    }.frame(maxWidth:.infinity, alignment:.leading).padding(.horizontal,8)
                 }
-                .buttonStyle(.plain).frame(width: 32, height: 32)
-                .contentShape(Rectangle())
-                .background(r == v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+                .padding(.vertical,4).frame(width:170)
+                .background(Color(red:0.17, green:0.17, blue:0.17))
+                .clipShape(RoundedRectangle(cornerRadius:8))
             }
         }
     }
@@ -344,8 +391,13 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             Text(node.name.prefix(14)).font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink).lineLimit(1)
             Separator(theme: theme)
-            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
-            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
+            HStack(spacing:2) {
+                ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
+                ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
+            }
+            .popover(isPresented: $showColorEditor, arrowEdge: .bottom) {
+                colorEditorPopover()
+            }
             NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
         }
     }
