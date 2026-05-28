@@ -236,6 +236,8 @@ struct ToolbarView: View {
                 }
                 .frame(width: 180)
                 .padding(.vertical, 4)
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
             }
 
             // 样式选择（仅一种样式时不可点击）
@@ -599,6 +601,8 @@ struct ToolbarView: View {
                 }
                 .frame(width: 60)
                 .padding(.vertical, 4)
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
             }
         }
     }
@@ -711,6 +715,8 @@ struct ToolbarView: View {
                 }
                 .frame(width: 60)
                 .padding(.vertical, 4)
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
             }
         }
     }
