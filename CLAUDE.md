@@ -134,7 +134,6 @@ cdp-toolbar/
    - `autoResizePicker`（3 个 32px + 间距）: ~100px
    - `ColorPicker`（scaleEffect 0.75）: ~17px
    - `Separator`: 1px
-   - `opacitySlider`: ~90px
 
 2. HStack spacing: `spacing: 6`（textToolbar）/ `spacing: 4`（alignToolbar）
 

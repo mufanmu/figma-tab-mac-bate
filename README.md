@@ -62,6 +62,8 @@ Figma 生产版本主动调用了 `app.commandLine.removeSwitch("remote-debuggin
 | Figma API 封装 | `FigmaAPI.swift` |
 | NSPanel + 定位 + 轮询 | `AppDelegate.swift` |
 | 工具栏 UI | `ToolbarView.swift` |
+| 颜色编辑器 | `ToolbarView.swift`（AntColorPicker） |
+| 设计系统 | `DesignTokens.swift` |
 | 坐标定位 | `viewport.bounds` 线性映射 canvas→DOM→Cocoa |
 | CDP 通道 | `Runtime.evaluate` → `result.result.value`（双层嵌套） |
 
