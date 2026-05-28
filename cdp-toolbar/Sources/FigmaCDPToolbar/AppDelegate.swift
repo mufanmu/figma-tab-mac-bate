@@ -105,12 +105,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     func reconnect() async {
         isReconnecting = true
         statusText = "重新连接中..."
+        pollingTask?.cancel()
         api.disconnect()
         selectedNode = nil
         viewport = nil
         panel?.orderOut(nil)
         await connectAndStartPolling()
-        isReconnecting = false
     }
 
     func loadFontsIfNeeded() {
@@ -164,6 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private func startPolling() {
+        isReconnecting = false
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self = self else { break }

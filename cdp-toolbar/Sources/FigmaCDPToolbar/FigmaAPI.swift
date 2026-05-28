@@ -6,7 +6,7 @@ final class FigmaAPI: @unchecked Sendable {
     init(client: CDPClient) { self.client = client }
 
     nonisolated func discoverAndConnect(port: Int = 9222) async -> Bool {
-        return await discoverAndSkip(port: port, skipURL: client.currentURL)
+        return await discoverAndSkip(port: port, skipURL: "")
     }
 
     /// 发现 CDP 目标，跳过指定 URL，连接到第一个其他可用目标
