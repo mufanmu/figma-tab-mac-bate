@@ -104,8 +104,8 @@ struct ToolbarView: View {
             textCasePicker(node: node)
             autoResizePicker(node: node)
             Separator(theme: theme)
-            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, theme: theme) { editingFill = true; showColorEditor = true }
-            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, theme: theme) { editingFill = false; showColorEditor = true }
+            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
+            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
         }
     }
 
@@ -312,8 +312,8 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             Text(node.name.prefix(14)).font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink).lineLimit(1)
             Separator(theme: theme)
-            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, theme: theme) { editingFill = true; showColorEditor = true }
-            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, theme: theme) { editingFill = false; showColorEditor = true }
+            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
+            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
             NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
         }
     }
@@ -638,30 +638,34 @@ struct ToolbarView: View {
         let color: Color
         let isFill: Bool
         let hasColor: Bool
+        let isActive: Bool
         let theme: FigmaTheme
         let onTap: () -> Void
 
         var body: some View {
             Button(action: onTap) {
-                if hasColor {
-                    ZStack {
-                        if isFill {
-                            Circle().fill(color).frame(width: 18, height: 18)
-                        } else {
-                            Circle().strokeBorder(color, lineWidth: 4).frame(width: 18, height: 18)
+                Color.clear.frame(width: 32, height: 32).contentShape(Rectangle())
+                    .overlay(
+                        Group {
+                            if hasColor {
+                                if isFill {
+                                    Circle().fill(color).frame(width: 20, height: 20)
+                                } else {
+                                    Circle().strokeBorder(color, lineWidth: 4).frame(width: 20, height: 20)
+                                }
+                            } else {
+                                if Bundle.module.url(forResource: "None", withExtension: "svg") != nil {
+                                    toolbarIcon("None", size: 20).foregroundColor(theme.ink)
+                                } else {
+                                    Image(systemName: "circle.slash").font(.system(size: 12)).foregroundColor(theme.ink)
+                                }
+                            }
                         }
-                    }
-                } else {
-                    if Bundle.module.url(forResource: "None", withExtension: "svg") != nil {
-                        toolbarIcon("None", size: 18).foregroundColor(theme.ink)
-                    } else {
-                        Image(systemName: "circle.slash").font(.system(size: 12)).foregroundColor(theme.ink)
-                    }
-                }
+                    )
             }
-            .buttonStyle(.plain)
-            .frame(width: 24, height: 24)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain).frame(width: 32, height: 32)
+            .background(isActive ? theme.hairline : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
         }
     }
 
@@ -696,6 +700,7 @@ struct ToolbarView: View {
         @State private var sInput: String = "0"
         @State private var bInput: String = "100"
         @State private var alphaInput: String = "100"
+        @State private var showFormatPicker = false
 
         private let bgColor = Color(red: 0.17, green: 0.17, blue: 0.17)
         private let inputBg = Color(red: 0.12, green: 0.12, blue: 0.12)
@@ -748,11 +753,11 @@ struct ToolbarView: View {
         private func syncInputs() {
             let c = NSColor(_color.wrappedValue).usingColorSpace(.deviceRGB)
             let comps = c?.cgColor.components ?? [0,0,0]
-            hexInput = String(format: "%02X%02X%02X", Int(comps[0]*255), Int(comps[1]*255), Int(comps[2]*255))
-            hInput = "\(Int(hue * 360))"
-            sInput = "\(Int(sat * 100))"
-            bInput = "\(Int(bri * 100))"
-            alphaInput = "\(Int(alpha * 100))"
+            hexInput = String(format: "%02X%02X%02X", lround(comps[0]*255), lround(comps[1]*255), lround(comps[2]*255))
+            hInput = "\(lround(hue * 360))"
+            sInput = "\(lround(sat * 100))"
+            bInput = "\(lround(bri * 100))"
+            alphaInput = "\(lround(alpha * 100))"
         }
 
         private func applyColor() {
@@ -894,16 +899,35 @@ struct ToolbarView: View {
                     .frame(width: 24)
 
                     // Format selector
-                    Picker("", selection: $format) {
-                        ForEach(ColorFormat.allCases, id: \.self) { fmt in
-                            Text(fmt.rawValue).tag(fmt).font(.system(size: 11))
+                    Button {
+                        showFormatPicker = true
+                    } label: {
+                        HStack(spacing: 2) {
+                            Text(format.rawValue).font(.system(size: 11)).foregroundColor(.white)
+                            Image(systemName: "chevron.down").font(.system(size: 6)).foregroundColor(.white.opacity(0.5))
                         }
+                        .frame(width: 52, height: 22)
+                        .background(inputBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 52)
-                    .background(inputBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showFormatPicker, arrowEdge: .bottom) {
+                        VStack(spacing: 0) {
+                            ForEach(ColorFormat.allCases, id: \.self) { fmt in
+                                Button(fmt.rawValue) { format = fmt; showFormatPicker = false }
+                                    .font(.system(size: 11)).foregroundColor(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 8).padding(.vertical, 5)
+                                    .background(format == fmt ? Color.accentColor.opacity(0.3) : Color.clear)
+                                    .contentShape(Rectangle())
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4).frame(width: 60)
+                        .background(bgColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
 
                     // Value input
                     switch format {

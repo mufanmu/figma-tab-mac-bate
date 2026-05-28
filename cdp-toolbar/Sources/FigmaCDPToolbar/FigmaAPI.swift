@@ -75,7 +75,11 @@ final class FigmaAPI: @unchecked Sendable {
     // MARK: - Properties
 
     nonisolated func setFillColor(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) async -> Bool {
-        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].fills=[{type:'SOLID',color:{r:\(r),g:\(g),b:\(b)},opacity:\(a)}];return'ok'})()")
+        let rr = Double(lround(r * 1000)) / 1000
+        let gg = Double(lround(g * 1000)) / 1000
+        let bb = Double(lround(b * 1000)) / 1000
+        let aa = Double(lround(a * 100)) / 100
+        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].fills=[{type:'SOLID',color:{r:\(rr),g:\(gg),b:\(bb)},opacity:\(aa)}];return'ok'})()")
         return res?.contains("ok") ?? false
     }
 
@@ -90,7 +94,10 @@ final class FigmaAPI: @unchecked Sendable {
     }
 
     nonisolated func setStrokeColor(_ r: Double, _ g: Double, _ b: Double) async -> Bool {
-        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokes=[{type:'SOLID',color:{r:\(r),g:\(g),b:\(b)}}];return'ok'})()")
+        let rr = Double(lround(r * 1000)) / 1000
+        let gg = Double(lround(g * 1000)) / 1000
+        let bb = Double(lround(b * 1000)) / 1000
+        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokes=[{type:'SOLID',color:{r:\(rr),g:\(gg),b:\(bb)}}];return'ok'})()")
         return res?.contains("ok") ?? false
     }
 
