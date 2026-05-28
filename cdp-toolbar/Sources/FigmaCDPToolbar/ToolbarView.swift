@@ -53,11 +53,11 @@ struct ToolbarView: View {
 
     /// 根据当前工具栏模式计算宽度 (content + 左右各 10px)
     private var desiredWidth: CGFloat {
-        guard let node = delegate.selectedNode else { return 537 }
+        guard let node = delegate.selectedNode else { return 509 }
         if node.selectionCount > 1 || node.allTypes.count > 1 {
             return 299
         } else if node.type == .text {
-            return 537
+            return 509
         } else if node.type.isShape {
             return 283
         }
@@ -149,7 +149,7 @@ struct ToolbarView: View {
                         .focused($isSearchFocused)
                 }
             }
-            .frame(width: 112)
+            .frame(width: 84)
             .padding(.horizontal, 4)
             .frame(height: 22)
             .background(theme.surfaceSoft)
@@ -287,7 +287,7 @@ struct ToolbarView: View {
                             HStack {
                                 toolbarIcon(svgMap[t] ?? "text align left", size:16).foregroundColor(theme.ink)
                                 Text(["LEFT":"左对齐","CENTER":"居中","RIGHT":"右对齐","JUSTIFIED":"两端对齐"][t] ?? t)
-                                    .font(.system(size:11)).foregroundColor(.white)
+                                    .font(FigmaTokens.fontBody).foregroundColor(theme.ink)
                             }
                             .frame(maxWidth:.infinity, alignment:.leading)
                             .padding(.horizontal,8).padding(.vertical,5)
@@ -298,8 +298,8 @@ struct ToolbarView: View {
                     }
                 }
                 .padding(.vertical,4).frame(width:100)
-                .background(Color(red:0.17, green:0.17, blue:0.17))
-                .clipShape(RoundedRectangle(cornerRadius:8))
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
             }
         }
     }
@@ -337,7 +337,7 @@ struct ToolbarView: View {
             .onHover { over in if over { show = true } }
             .popover(isPresented:$show, arrowEdge:.bottom) {
                 VStack(spacing:0) {
-                    Text("装饰").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                    Text("装饰").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,4)
                     HStack(spacing:2) {
                         ToggleBtn(svg:"underline", system:nil, active:currentD=="UNDERLINE", size:20, theme:theme) {
@@ -347,8 +347,8 @@ struct ToolbarView: View {
                             Task { _ = await api.setTextDecoration(currentD=="STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
-                    Text("大小写").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Text("大小写").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:2) {
                         let cases:[(String,String)] = [("ORIGINAL","Remove"),("UPPER","text caps"),("LOWER","lowercase"),("TITLE","title case")]
@@ -360,8 +360,8 @@ struct ToolbarView: View {
                             .background(currentC==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
-                    Text("自动尺寸").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Text("自动尺寸").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:2) {
                         ForEach(["WIDTH_AND_HEIGHT","HEIGHT","NONE"], id:\.self) { v in
@@ -372,29 +372,29 @@ struct ToolbarView: View {
                             .background(currentR==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(.white.opacity(0.1)).padding(.horizontal,4)
-                    Text("段落").font(.system(size:9)).foregroundColor(.white.opacity(0.5))
+                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Text("段落").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:6) {
                         toolbarIcon("text paragraph spacing", size:16).foregroundColor(theme.ink)
                         TextField("0", text:Binding(get:{String(Int(ps))}, set:{if let v=Double($0){ps=v;onPS(ps)}}))
-                            .textFieldStyle(.plain).font(.system(size:11,design:.monospaced)).foregroundColor(.white)
+                            .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
-                            .background(Color(red:0.12,green:0.12,blue:0.12)).clipShape(RoundedRectangle(cornerRadius:4))
-                            .overlay(RoundedRectangle(cornerRadius:4).stroke(Color(red:0.24,green:0.24,blue:0.24),lineWidth:1))
+                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+                            .overlay(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm).stroke(theme.hairline,lineWidth:1))
                             .onSubmit { onPS(ps) }
                         toolbarIcon("text paragraph indent", size:16).foregroundColor(theme.ink)
                         TextField("0", text:Binding(get:{String(Int(pi))}, set:{if let v=Double($0){pi=v;onPI(pi)}}))
-                            .textFieldStyle(.plain).font(.system(size:11,design:.monospaced)).foregroundColor(.white)
+                            .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
-                            .background(Color(red:0.12,green:0.12,blue:0.12)).clipShape(RoundedRectangle(cornerRadius:4))
-                            .overlay(RoundedRectangle(cornerRadius:4).stroke(Color(red:0.24,green:0.24,blue:0.24),lineWidth:1))
+                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+                            .overlay(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm).stroke(theme.hairline,lineWidth:1))
                             .onSubmit { onPI(pi) }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.horizontal,8)
                 }
                 .padding(.vertical,4).frame(width:170)
-                .background(Color(red:0.17, green:0.17, blue:0.17))
-                .clipShape(RoundedRectangle(cornerRadius:8))
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
             }
         }
     }
