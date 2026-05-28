@@ -780,9 +780,9 @@ struct ToolbarView: View {
                     LinearGradient(colors: [.black, .clear], startPoint: .bottom, endPoint: .top)
                     // 光标
                     Circle()
-                        .fill(Color.white)
+                        .fill(Color(hue: hue, saturation: sat, brightness: bri, opacity: alpha))
                         .frame(width: 18, height: 18)
-                        .shadow(color: .black.opacity(0.3), radius: 3)
+                        .shadow(color: .black.opacity(0.3), radius: 2)
                         .overlay(Circle().stroke(Color.white, lineWidth: 3))
                         .offset(x: sat * Double(geo.size.width) - 9, y: (1 - bri) * Double(geo.size.height) - 9)
                 }
@@ -818,10 +818,10 @@ struct ToolbarView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 // Thumb
                 Circle()
-                    .fill(Color.white)
+                    .fill(Color(hue: hue, saturation: 1, brightness: 1))
                     .frame(width: 16, height: 16)
                     .shadow(color: .black.opacity(0.3), radius: 2)
-                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
                     .offset(x: hue * Double(geo.size.width) - 8, y: 0)
             }
             .onTapGesture { loc in
@@ -856,10 +856,10 @@ struct ToolbarView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 // Thumb
                 Circle()
-                    .fill(Color.white)
+                    .fill(Color(hue: hue, saturation: sat, brightness: bri, opacity: alpha))
                     .frame(width: 16, height: 16)
                     .shadow(color: .black.opacity(0.3), radius: 2)
-                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
                     .offset(x: alpha * Double(geo.size.width) - 8, y: 0)
             }
             .onTapGesture { loc in
@@ -879,11 +879,19 @@ struct ToolbarView: View {
             VStack(spacing: 8) {
                 // 格式切换 + 数值 + 透明度
                 HStack(spacing: 6) {
-                    // Paint bucket icon
-                    Image(systemName: "paintbucket.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white)
-                        .frame(width: 24)
+                    // Eyedropper
+                    Button(action: {
+                        NSApp.activate(ignoringOtherApps: true)
+                        Task { @MainActor in
+                            let ns = await NSColorSampler().sample()
+                            guard let ns, let srgb = ns.usingColorSpace(.sRGB) else { return }
+                            setColor(Color(srgb))
+                        }
+                    }) {
+                        toolbarIcon("Style Fill", size: 18).foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 24)
 
                     // Format selector
                     Picker("", selection: $format) {
@@ -930,28 +938,16 @@ struct ToolbarView: View {
                     }
                 }
 
-                // 透明度行
-                HStack(spacing: 6) {
-                    Text("Alpha").font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).frame(width: 36, alignment: .leading)
-                    Slider(value: $alpha, in: 0...1)
-                        .onChange(of: alpha) { _, _ in applyColor() }
-                    TextField("100", text: $alphaInput)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .frame(width: 32)
-                        .background(inputBg)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
-                        .onSubmit {
-                            if let v = Double(alphaInput) { alpha = max(0, min(1, v / 100)); applyColor() }
-                        }
-                    Text("%").font(.system(size: 12)).foregroundColor(.white)
-                }
-
                 // 预设颜色 + 描边选项
                 HStack {
+                    // Remove color
+                    Button(action: onRemove) {
+                        toolbarIcon("None", size: 18).foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+
+                    Rectangle().fill(inputStroke).frame(width: 1, height: 18)
+
                     // White preset
                     Button(action: { setColor(Color.white) }) {
                         Circle().fill(Color.white).frame(width: 18, height: 18)
@@ -963,12 +959,6 @@ struct ToolbarView: View {
                     Button(action: { setColor(Color.black) }) {
                         Circle().fill(Color.black).frame(width: 18, height: 18)
                             .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-
-                    // Remove color
-                    Button(action: onRemove) {
-                        toolbarIcon("None", size: 18).foregroundColor(.white)
                     }
                     .buttonStyle(.plain)
 

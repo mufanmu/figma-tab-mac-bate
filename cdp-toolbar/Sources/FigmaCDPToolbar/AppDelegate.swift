@@ -57,7 +57,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // 固定 1250px 宽度，确保所有工具栏控件完整显示
         hostingView.setFrameSize(NSSize(width: 1250, height: 56))
         panel.contentView = hostingView
-        panel.orderFront(nil)
         self.panel = panel
     }
 
