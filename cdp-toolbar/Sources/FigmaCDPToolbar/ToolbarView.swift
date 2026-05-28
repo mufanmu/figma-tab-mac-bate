@@ -37,16 +37,31 @@ struct ToolbarView: View {
                 }
             }
         }
-        .padding(.horizontal, 6).padding(.vertical, 4)
-        .frame(width: 1250)
+        .padding(.horizontal, 10).padding(.vertical, 4)
+        .frame(width: delegate.panelWidth)
         .background(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd).fill(Color.black.opacity(0.7)).shadow(color: theme.shadow, radius: 8, y: 2))
         .onChange(of: delegate.selectedNode?.id ?? "") { _, _ in
             if let node = delegate.selectedNode {
                 updateFromNode(node)
+                delegate.panelWidth = desiredWidth
                 searchText = ""
                 delegate.loadAllFontsForSearch()
             }
         }
+        .onAppear { delegate.panelWidth = desiredWidth }
+    }
+
+    /// 根据当前工具栏模式计算宽度 (content + 左右各 10px)
+    private var desiredWidth: CGFloat {
+        guard let node = delegate.selectedNode else { return 537 }
+        if node.selectionCount > 1 || node.allTypes.count > 1 {
+            return 299
+        } else if node.type == .text {
+            return 537
+        } else if node.type.isShape {
+            return 283
+        }
+        return 537
     }
 
     private func colorEditorPopover() -> some View {
