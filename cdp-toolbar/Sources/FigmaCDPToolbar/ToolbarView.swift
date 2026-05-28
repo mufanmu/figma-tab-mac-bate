@@ -41,7 +41,7 @@ struct ToolbarView: View {
         .padding(.horizontal, 10).padding(.vertical, 4)
         .frame(width: delegate.panelWidth)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.black.opacity(0.8)).shadow(color: theme.shadow, radius: 8, y: 2))
-        .onChange(of: delegate.selectedNode?.id ?? "") { _, _ in
+        .onChange(of: "\(delegate.selectedNode?.id ?? "")-\(delegate.selectedNode?.selectionCount ?? 0)-\(delegate.selectedNode?.allTypes.count ?? 0)") { _, _ in
             if let node = delegate.selectedNode {
                 updateFromNode(node)
                 delegate.panelWidth = desiredWidth
@@ -56,7 +56,7 @@ struct ToolbarView: View {
     private var desiredWidth: CGFloat {
         guard let node = delegate.selectedNode else { return 498 }
         if node.selectionCount > 1 || node.allTypes.count > 1 {
-            return 220
+            return 262
         } else if node.type == .text {
             return 498
         } else if node.type.isShape {
@@ -379,7 +379,7 @@ struct ToolbarView: View {
                             Task { _ = await api.setTextDecoration(currentD=="STRIKETHROUGH" ? "NONE" : "STRIKETHROUGH") }
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Divider().overlay(theme.hairline.opacity(0.7)).padding(.horizontal,4)
                     Text("大小写").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:2) {
@@ -392,7 +392,7 @@ struct ToolbarView: View {
                             .background(currentC==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Divider().overlay(theme.hairline.opacity(0.7)).padding(.horizontal,4)
                     Text("自动尺寸").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:2) {
@@ -404,7 +404,7 @@ struct ToolbarView: View {
                             .background(currentR==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
-                    Divider().overlay(theme.hairline).padding(.horizontal,4)
+                    Divider().overlay(theme.hairline.opacity(0.7)).padding(.horizontal,4)
                     Text("段落").font(FigmaTokens.fontCaptionSmall).foregroundColor(theme.ink.opacity(0.5))
                         .frame(maxWidth:.infinity, alignment:.leading).padding(.leading,8).padding(.top,2)
                     HStack(spacing:6) {
@@ -413,14 +413,14 @@ struct ToolbarView: View {
                             .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
                             .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: 4))
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline,lineWidth:1))
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline.opacity(0.7),lineWidth:1))
                             .onSubmit { onPS(ps) }
                         toolbarIcon("text paragraph indent", size:16).foregroundColor(theme.ink)
                         TextField("0", text:Binding(get:{String(Int(pi))}, set:{if let v=Double($0){pi=v;onPI(pi)}}))
                             .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
                             .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: 4))
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline,lineWidth:1))
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline.opacity(0.7),lineWidth:1))
                             .onSubmit { onPI(pi) }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.horizontal,8)
                 }
@@ -450,28 +450,31 @@ struct ToolbarView: View {
     private func alignToolbar(node: NodeProperties) -> some View {
         HStack(spacing: 4) {
             // 垂直对齐组：左/中/右
-            HStack(spacing: 0) {
+            HStack(spacing: 6) {
                 IconBtn(svg: "Align vertical left", theme: theme) { Task { _ = await delegate.api.alignLeft() } }
                 IconBtn(svg: "Align vertical center", theme: theme) { Task { _ = await delegate.api.alignHorizontalCenter() } }
                 IconBtn(svg: "Align vertical right", theme: theme) { Task { _ = await delegate.api.alignRight() } }
             }
+            .padding(.horizontal, 2)
             .background(Color(hex: "222222"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
             // 水平对齐组：上/中/下
-            HStack(spacing: 0) {
+            HStack(spacing: 6) {
                 IconBtn(svg: "Align horizontal top", theme: theme) { Task { _ = await delegate.api.alignTop() } }
                 IconBtn(svg: "Align horizontal center", theme: theme) { Task { _ = await delegate.api.alignVerticalCenter() } }
                 IconBtn(svg: "Align horizontal bottom", theme: theme) { Task { _ = await delegate.api.alignBottom() } }
             }
+            .padding(.horizontal, 2)
             .background(Color(hex: "222222"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
             // 分布组：水平/垂直
-            HStack(spacing: 0) {
+            HStack(spacing: 6) {
                 IconBtn(svg: "Distribute horizontal spacing", theme: theme) { Task { _ = await delegate.api.distributeHorizontal() } }
                 IconBtn(svg: "Distribute vertical spacing", theme: theme) { Task { _ = await delegate.api.distributeVertical() } }
             }
+            .padding(.horizontal, 2)
             .background(Color(hex: "222222"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
@@ -480,7 +483,7 @@ struct ToolbarView: View {
     // MARK: - Shared
 
     private struct Separator: View { let theme: FigmaTheme; var body: some View {
-        Rectangle().fill(theme.hairline).frame(width: 1, height: 20)
+        Rectangle().fill(theme.hairline.opacity(0.7)).frame(width: 1, height: 20)
     }}
 
     private struct NumField: View {
