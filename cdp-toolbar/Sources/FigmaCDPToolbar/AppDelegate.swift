@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published var fontsLoaded = false
     @Published var fontLoadCount = 0
     @Published var isReconnecting = false
-    @Published var panelWidth: CGFloat = 509
+    @Published var panelWidth: CGFloat = 498
 
     private var panel: NSPanel?
     private var pollingTask: Task<Void, Never>?
@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.appearance = NSAppearance(named: .darkAqua)
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
 

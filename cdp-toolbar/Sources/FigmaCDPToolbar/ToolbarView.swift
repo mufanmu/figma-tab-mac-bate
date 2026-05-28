@@ -23,6 +23,7 @@ struct ToolbarView: View {
     @State private var showColorEditor = false
     @State private var editingFill = true
     @State private var strokeAlignValue: String = "CENTER"
+    @State private var showStylePopover = false
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -39,7 +40,7 @@ struct ToolbarView: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
         .frame(width: delegate.panelWidth)
-        .background(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd).fill(Color.black.opacity(0.7)).shadow(color: theme.shadow, radius: 8, y: 2))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.black.opacity(0.8)).shadow(color: theme.shadow, radius: 8, y: 2))
         .onChange(of: delegate.selectedNode?.id ?? "") { _, _ in
             if let node = delegate.selectedNode {
                 updateFromNode(node)
@@ -53,11 +54,11 @@ struct ToolbarView: View {
 
     /// 根据当前工具栏模式计算宽度 (content + 左右各 10px)
     private var desiredWidth: CGFloat {
-        guard let node = delegate.selectedNode else { return 509 }
+        guard let node = delegate.selectedNode else { return 498 }
         if node.selectionCount > 1 || node.allTypes.count > 1 {
             return 299
         } else if node.type == .text {
-            return 509
+            return 498
         } else if node.type.isShape {
             return 283
         }
@@ -109,14 +110,13 @@ struct ToolbarView: View {
             }
             Separator(theme: theme)
             fontPicker(node: node)
-            Separator(theme: theme)
             PresetField(labelIcon: "text font size", value: $fontSize, presets: [10, 12, 14, 16, 18, 20, 24, 32], onChange: { v in Task { _ = await delegate.api.setFontSize(v) } }, theme: theme)
-            alignButtons(node: node)
             Separator(theme: theme)
             // 行高：输入数字或 "auto" 回车确认
             LineHeightField(theme: theme, lineHeight: $lineHeight, lineHeightAuto: $lineHeightAuto, api: delegate.api)
             PresetField(labelIcon: "text letter spacing", value: $letterSpacing, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setLetterSpacing(v) } }, theme: theme)
             Separator(theme: theme)
+            alignButtons(node: node)
             settingDropdown(node: node)
         }
     }
@@ -151,12 +151,12 @@ struct ToolbarView: View {
             }
             .frame(width: 84)
             .padding(.horizontal, 4)
-            .frame(height: 22)
-            .background(theme.surfaceSoft)
+            .frame(height: 24)
+            .background(Color(hex: "333333"))
             .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             .overlay(
                 RoundedRectangle(cornerRadius: FigmaTokens.roundedSm)
-                    .stroke(theme.hairline, lineWidth: 1)
+                    .stroke(theme.surfaceSoft, lineWidth: 1)
             )
             // 透明层捕获点击：聚焦 + 展开列表 + 定位当前字体
             .overlay(
@@ -242,20 +242,50 @@ struct ToolbarView: View {
 
             // 样式选择（仅一种样式时不可点击）
             let fontStyles = delegate.fonts.first(where: { $0.family == selectedFontFamily })?.styles ?? []
-            Menu {
-                ForEach(fontStyles, id: \.self) { s in
-                    Button {
-                        selectedFontStyle = s
-                        Task { await delegate.api.setFontFamily(selectedFontFamily, s) }
-                    } label: { Text(s) }
-                }
+            Button {
+                showStylePopover = true
             } label: {
                 Text(selectedFontStyle).font(FigmaTokens.fontBodySmall).lineLimit(1)
-                    .frame(width: 75, alignment: .leading)
-                    .opacity(fontStyles.count <= 1 ? 0.35 : 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 6)
             }
-            .menuStyle(.borderlessButton).frame(width: 60)
+            .buttonStyle(.plain)
+            .frame(width: 56, height: 24)
+            .background(Color(hex: "333333"))
+            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .opacity(fontStyles.count <= 1 ? 0.35 : 1)
             .disabled(fontStyles.count <= 1)
+            .popover(isPresented: $showStylePopover, arrowEdge: .bottom) {
+                VStack(spacing: 0) {
+                    ForEach(fontStyles, id: \.self) { s in
+                        Button {
+                            selectedFontStyle = s
+                            Task { await delegate.api.setFontFamily(selectedFontFamily, s) }
+                            showStylePopover = false
+                        } label: {
+                            HStack {
+                                Text(s)
+                                    .font(FigmaTokens.fontBody)
+                                    .foregroundColor(s == selectedFontStyle ? FigmaColors.accentBlue : theme.ink)
+                                Spacer()
+                                if s == selectedFontStyle {
+                                    Image(systemName: "checkmark")
+                                        .font(FigmaTokens.fontBodySmall)
+                                        .foregroundColor(FigmaColors.accentBlue)
+                                }
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(s == selectedFontStyle ? FigmaColors.accentBlue.opacity(0.1) : Color.clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(width: 100)
+                .padding(.vertical, 4)
+                .background(theme.canvas)
+                .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedMd))
+            }
         }
         .onChange(of: searchText) { _, newValue in
             if !newValue.isEmpty {
@@ -277,7 +307,7 @@ struct ToolbarView: View {
                 toolbarIcon(svgMap[current] ?? "text align left", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(theme.hairline).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "333333")).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             .onHover { over in if over { showPopover = true } }
             .popover(isPresented:$showPopover, arrowEdge:.bottom) {
                 VStack(spacing:2) {
@@ -335,7 +365,7 @@ struct ToolbarView: View {
                 toolbarIcon("Setting", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(theme.hairline).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "333333")).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             .onHover { over in if over { show = true } }
             .popover(isPresented:$show, arrowEdge:.bottom) {
                 VStack(spacing:0) {
@@ -359,7 +389,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svg, size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentC==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentC==v ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline).padding(.horizontal,4)
@@ -371,7 +401,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svgMap[v] ?? "text Fixed size", size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentR==v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentR==v ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline).padding(.horizontal,4)
@@ -522,7 +552,7 @@ struct ToolbarView: View {
             else if let s = system { Image(systemName: s).font(.system(size: 10)).foregroundColor(theme.ink) }
         }
             .buttonStyle(.plain).frame(width: size, height: size)
-            .background(active ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(active ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
     }}
 
     /// 带预设下拉菜单的数值输入（点击展开，可选预设或输入自定义）
@@ -566,8 +596,8 @@ struct ToolbarView: View {
                     if !focused { inputText = "" }
                 }
             }
-            .frame(height: 28).padding(.horizontal, 4)
-            .background(theme.surfaceSoft)
+            .frame(height: 24).padding(.horizontal, 4)
+            .background(Color(hex: "333333"))
             .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             .overlay(
                 Color.clear
@@ -656,8 +686,8 @@ struct ToolbarView: View {
                     if !focused { inputText = "" }
                 }
             }
-            .frame(height: 28).padding(.horizontal, 4)
-            .background(theme.surfaceSoft)
+            .frame(height: 24).padding(.horizontal, 4)
+            .background(Color(hex: "333333"))
             .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             .overlay(
                 Color.clear
@@ -768,7 +798,7 @@ struct ToolbarView: View {
                     )
             }
             .buttonStyle(.plain).frame(width: 24, height: 24)
-            .background(isActive ? theme.hairline : Color.clear)
+            .background(isActive ? Color(hex: "333333") : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
         }
     }
