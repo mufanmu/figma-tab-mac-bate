@@ -99,6 +99,21 @@ final class FigmaAPI: @unchecked Sendable {
         return r?.contains("ok") ?? false
     }
 
+    nonisolated func setStrokeAlign(_ a: String) async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokeAlign='\(a)';return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+
+    nonisolated func removeFill() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].fills=[];return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+
+    nonisolated func removeStroke() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokes=[];return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+
     // MARK: - Text
 
     private func textCmd(_ js: String) async -> Bool {
@@ -186,7 +201,7 @@ final class FigmaAPI: @unchecked Sendable {
         info.textAutoResize=n.textAutoResize||'NONE';
         }
         if(n.fills&&n.fills.length&&n.fills[0].type==='SOLID'){info.fillColor=n.fills[0].color;info.fillOpacity=n.fills[0].opacity}
-        if(n.strokes&&n.strokes.length&&n.strokes[0].type==='SOLID'){info.strokeColor=n.strokes[0].color;info.strokeWeight=n.strokeWeight}
+        if(n.strokes&&n.strokes.length&&n.strokes[0].type==='SOLID'){info.strokeColor=n.strokes[0].color;info.strokeWeight=n.strokeWeight;info.strokeAlign=n.strokeAlign}
         return JSON.stringify({vp:vp,node:info})})()
         """
     }

@@ -20,6 +20,9 @@ struct ToolbarView: View {
     @State private var searchText: String = ""
     @State private var showDropdown: Bool = false
     @State private var dismissTask: Task<Void, Never>? = nil
+    @State private var showColorEditor = false
+    @State private var editingFill = true
+    @State private var strokeAlignValue: String = "CENTER"
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -45,6 +48,27 @@ struct ToolbarView: View {
                 delegate.loadAllFontsForSearch()
             }
         }
+        .popover(isPresented: $showColorEditor, arrowEdge: .bottom) {
+            colorEditorPopover()
+        }
+    }
+
+    private func colorEditorPopover() -> some View {
+        AntColorPicker(
+            color: editingFill ? $fillColor : $strokeColor,
+            title: editingFill ? "填充" : "描边",
+            onApply: { c, a in
+                guard let rgba = c.toRGBA() else { return }
+                Task { if editingFill { _ = await delegate.api.setFillColor(rgba.r, rgba.g, rgba.b, rgba.a) } else { _ = await delegate.api.setStrokeColor(rgba.r, rgba.g, rgba.b) } }
+            },
+            onRemove: { Task { if self.editingFill { await delegate.api.removeFill() } else { await delegate.api.removeStroke() } } },
+            showStrokeOptions: !editingFill,
+            strokeWeight: $strokeWeight,
+            strokeAlign: $strokeAlignValue,
+            onStrokeWeightChange: { v in Task { await delegate.api.setStrokeWeight(v) } },
+            onStrokeAlignChange: { a in Task { await delegate.api.setStrokeAlign(a) } },
+            api: delegate.api
+        )
     }
 
     private func updateFromNode(_ node: NodeProperties) {
@@ -58,6 +82,7 @@ struct ToolbarView: View {
         paragraphSpacing = node.paragraphSpacing ?? 0; paragraphIndent = node.paragraphIndent ?? 0
         if let fn = node.fontName { selectedFontFamily = fn }
         if let fw = node.fontWeight { selectedFontStyle = fw }
+        strokeAlignValue = node.strokeAlign ?? "CENTER"
     }
 
     // MARK: - Text
@@ -79,8 +104,8 @@ struct ToolbarView: View {
             textCasePicker(node: node)
             autoResizePicker(node: node)
             Separator(theme: theme)
-            ColorPicker("", selection: Binding(get: { fillColor }, set: { fillColor = $0; applyFill($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
-            opacitySlider
+            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, theme: theme) { editingFill = true; showColorEditor = true }
+            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, theme: theme) { editingFill = false; showColorEditor = true }
         }
     }
 
@@ -287,14 +312,9 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             Text(node.name.prefix(14)).font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink).lineLimit(1)
             Separator(theme: theme)
-            ColorPicker("", selection: Binding(get: { fillColor }, set: { fillColor = $0; applyFill($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
-            NumField(label: "不透明", value: $opacityValue, range: 0...1, mult: 100, theme: theme, onChange: { Task { _ = await delegate.api.setOpacity(opacityValue) } })
-            Separator(theme: theme)
-            ColorPicker("", selection: Binding(get: { strokeColor }, set: { strokeColor = $0; applyStroke($0) })).labelsHidden().frame(width: 22).scaleEffect(0.75)
-            NumField(label: "粗细", value: $strokeWeight, range: 0...100, theme: theme, onChange: { Task { _ = await delegate.api.setStrokeWeight(strokeWeight) } })
+            ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, theme: theme) { editingFill = true; showColorEditor = true }
+            ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, theme: theme) { editingFill = false; showColorEditor = true }
             NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
-            Spacer()
-            opacitySlider
         }
     }
 
@@ -611,6 +631,433 @@ struct ToolbarView: View {
         }
     }
 
-    private func applyFill(_ c: Color) { guard let rgba = c.toRGBA() else { return }; Task { _ = await delegate.api.setFillColor(rgba.r, rgba.g, rgba.b, rgba.a) } }
-    private func applyStroke(_ c: Color) { guard let rgba = c.toRGBA() else { return }; Task { _ = await delegate.api.setStrokeColor(rgba.r, rgba.g, rgba.b) } }
+    // MARK: - Color Editor
+
+    /// 色块按钮：填充是实心圆，描边是空心圆环
+    private struct ColorDotButton: View {
+        let color: Color
+        let isFill: Bool
+        let hasColor: Bool
+        let theme: FigmaTheme
+        let onTap: () -> Void
+
+        var body: some View {
+            Button(action: onTap) {
+                if hasColor {
+                    ZStack {
+                        if isFill {
+                            Circle().fill(color).frame(width: 18, height: 18)
+                        } else {
+                            Circle().strokeBorder(color, lineWidth: 4).frame(width: 18, height: 18)
+                        }
+                    }
+                } else {
+                    if Bundle.module.url(forResource: "None", withExtension: "svg") != nil {
+                        toolbarIcon("None", size: 18).foregroundColor(theme.ink)
+                    } else {
+                        Image(systemName: "circle.slash").font(.system(size: 12)).foregroundColor(theme.ink)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
+        }
+    }
+
+    // MARK: - Ant Design ColorPicker
+
+        /// Figma 设计风格颜色选择器 — 从设计稿复刻
+    private struct AntColorPicker: View {
+        @Binding var color: Color
+        let title: String
+        let onApply: (Color, Double) -> Void
+        let onRemove: () -> Void
+        let showStrokeOptions: Bool
+        @Binding var strokeWeight: Double
+        @Binding var strokeAlign: String
+        let onStrokeWeightChange: (Double) -> Void
+        let onStrokeAlignChange: (String) -> Void
+        let api: FigmaAPI
+
+        enum ColorFormat: String, CaseIterable {
+            case hex = "HEX"
+            case hsb = "HSB"
+            case rgb = "RGB"
+        }
+
+        @State private var hue: Double = 0
+        @State private var sat: Double = 0
+        @State private var bri: Double = 1
+        @State private var alpha: Double = 1
+        @State private var format: ColorFormat = .hex
+        @State private var hexInput: String = "000000"
+        @State private var hInput: String = "0"
+        @State private var sInput: String = "0"
+        @State private var bInput: String = "100"
+        @State private var alphaInput: String = "100"
+
+        private let bgColor = Color(red: 0.17, green: 0.17, blue: 0.17)
+        private let inputBg = Color(red: 0.12, green: 0.12, blue: 0.12)
+        private let inputStroke = Color(red: 0.24, green: 0.24, blue: 0.24)
+        private let dividerColor = Color(red: 0.24, green: 0.24, blue: 0.24)
+
+        var body: some View {
+            VStack(spacing: 0) {
+                // SB 拾色平面
+                sbPickerSection()
+                    .padding(EdgeInsets(top: 12, leading: 12, bottom: 0, trailing: 12))
+
+                // 彩虹色相滑块
+                sliderSection(title: "色相") { geo in
+                    rainbowSliderBody(geo: geo)
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+
+                // Alpha 滑块
+                sliderSection(title: "透明度") { geo in
+                    alphaSliderBody(geo: geo)
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+
+                // 输入行
+                inputRow()
+                    .padding(12)
+            }
+            .frame(width: 252)
+            .background(bgColor)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            )
+            .onAppear { loadFromColor() }
+        }
+
+        private func loadFromColor() {
+            let ns = NSColor(color)
+            hue = Double(ns.hueComponent)
+            sat = Double(ns.saturationComponent)
+            bri = Double(ns.brightnessComponent)
+            alpha = Double(ns.alphaComponent)
+            syncInputs()
+        }
+
+        private func syncInputs() {
+            let c = NSColor(_color.wrappedValue).usingColorSpace(.deviceRGB)
+            let comps = c?.cgColor.components ?? [0,0,0]
+            hexInput = String(format: "%02X%02X%02X", Int(comps[0]*255), Int(comps[1]*255), Int(comps[2]*255))
+            hInput = "\(Int(hue * 360))"
+            sInput = "\(Int(sat * 100))"
+            bInput = "\(Int(bri * 100))"
+            alphaInput = "\(Int(alpha * 100))"
+        }
+
+        private func applyColor() {
+            _color.wrappedValue = Color(hue: hue, saturation: sat, brightness: bri, opacity: alpha)
+            onApply(_color.wrappedValue, alpha)
+            syncInputs()
+        }
+
+        private func setColor(_ c: Color) {
+            let ns = NSColor(c).usingColorSpace(.deviceRGB)
+            guard let comps = ns?.cgColor.components, comps.count >= 3 else { return }
+            hue = Double(comps[0])
+            sat = Double(comps[1])
+            bri = Double(comps[2])
+            alpha = Double(ns?.alphaComponent ?? 1)
+            applyColor()
+        }
+
+        // MARK: - SB Picker
+        private func sbPickerSection() -> some View {
+            GeometryReader { geo in
+                ZStack(alignment: .topLeading) {
+                    Color(hue: hue, saturation: 1, brightness: 1)
+                    LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                    LinearGradient(colors: [.black, .clear], startPoint: .bottom, endPoint: .top)
+                    // 光标
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 18, height: 18)
+                        .shadow(color: .black.opacity(0.3), radius: 3)
+                        .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                        .offset(x: sat * Double(geo.size.width) - 9, y: (1 - bri) * Double(geo.size.height) - 9)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .onTapGesture { loc in
+                    let w = Double(geo.size.width); let h = Double(geo.size.height)
+                    sat = max(0, min(1, Double(loc.x) / w))
+                    bri = max(0, min(1, 1 - Double(loc.y) / h))
+                    applyColor()
+                }
+                .gesture(DragGesture(minimumDistance: 0).onChanged { val in
+                    let w = Double(geo.size.width); let h = Double(geo.size.height)
+                    sat = max(0, min(1, Double(val.location.x) / w))
+                    bri = max(0, min(1, 1 - Double(val.location.y) / h))
+                    applyColor()
+                })
+            }
+            .frame(height: 172)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+
+        // MARK: - Sliders
+        private func sliderSection(title: String, @ViewBuilder content: @escaping (GeometryProxy) -> some View) -> some View {
+            GeometryReader { geo in
+                content(geo)
+            }
+            .frame(height: 16)
+        }
+
+        private func rainbowSliderBody(geo: GeometryProxy) -> some View {
+            ZStack(alignment: .leading) {
+                LinearGradient(colors: (0...36).map { i in Color(hue: Double(i) / 36, saturation: 1, brightness: 1) }, startPoint: .leading, endPoint: .trailing)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                // Thumb
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: .black.opacity(0.3), radius: 2)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .offset(x: hue * Double(geo.size.width) - 8, y: 0)
+            }
+            .onTapGesture { loc in
+                let w = Double(geo.size.width)
+                hue = max(0, min(1, Double(loc.x) / w))
+                applyColor()
+            }
+            .gesture(DragGesture(minimumDistance: 0).onChanged { val in
+                let w = Double(geo.size.width)
+                hue = max(0, min(1, Double(val.location.x) / w))
+                applyColor()
+            })
+        }
+
+        private func alphaSliderBody(geo: GeometryProxy) -> some View {
+            ZStack(alignment: .leading) {
+                // Checkerboard
+                Canvas { ctx, size in
+                    let step: CGFloat = 5
+                    for row in 0..<Int(ceil(size.height / step)) {
+                        for col in 0..<Int(ceil(size.width / step)) {
+                            let isLight = (row + col).isMultiple(of: 2)
+                            ctx.fill(Path(CGRect(x: CGFloat(col) * step, y: CGFloat(row) * step, width: step, height: step)),
+                                     with: .color(isLight ? Color.white.opacity(0.3) : Color.gray.opacity(0.25)))
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 0.5))
+                // Gradient
+                LinearGradient(colors: [.clear, Color(hue: hue, saturation: sat, brightness: bri)], startPoint: .leading, endPoint: .trailing)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                // Thumb
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: .black.opacity(0.3), radius: 2)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .offset(x: alpha * Double(geo.size.width) - 8, y: 0)
+            }
+            .onTapGesture { loc in
+                let w = Double(geo.size.width)
+                alpha = max(0, min(1, Double(loc.x) / w))
+                applyColor()
+            }
+            .gesture(DragGesture(minimumDistance: 0).onChanged { val in
+                let w = Double(geo.size.width)
+                alpha = max(0, min(1, Double(val.location.x) / w))
+                applyColor()
+            })
+        }
+
+        // MARK: - Input Row
+        private func inputRow() -> some View {
+            VStack(spacing: 8) {
+                // 格式切换 + 数值 + 透明度
+                HStack(spacing: 6) {
+                    // Paint bucket icon
+                    Image(systemName: "paintbucket.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white)
+                        .frame(width: 24)
+
+                    // Format selector
+                    Picker("", selection: $format) {
+                        ForEach(ColorFormat.allCases, id: \.self) { fmt in
+                            Text(fmt.rawValue).tag(fmt).font(.system(size: 11))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 52)
+                    .background(inputBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
+
+                    // Value input
+                    switch format {
+                    case .hex:
+                        HStack(spacing: 2) {
+                            Text("#").font(.system(size: 12, design: .monospaced)).foregroundColor(.white.opacity(0.6))
+                            TextField("000000", text: $hexInput)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(.white)
+                                .onSubmit { parseHex() }
+                        }
+                        .padding(.horizontal, 8)
+                        .frame(height: 28)
+                        .background(inputBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
+
+                    case .hsb:
+                        HStack(spacing: 4) {
+                            numericField(label: "H", value: $hInput, onSubmit: parseHSB)
+                            numericField(label: "S", value: $sInput, onSubmit: parseHSB)
+                            numericField(label: "B", value: $bInput, onSubmit: parseHSB)
+                        }
+
+                    case .rgb:
+                        HStack(spacing: 4) {
+                            numericField(label: "R", value: $hInput, onSubmit: parseRGB)
+                            numericField(label: "G", value: $sInput, onSubmit: parseRGB)
+                            numericField(label: "B", value: $bInput, onSubmit: parseRGB)
+                        }
+                    }
+                }
+
+                // 透明度行
+                HStack(spacing: 6) {
+                    Text("Alpha").font(.system(size: 11)).foregroundColor(.white.opacity(0.6)).frame(width: 36, alignment: .leading)
+                    Slider(value: $alpha, in: 0...1)
+                        .onChange(of: alpha) { _, _ in applyColor() }
+                    TextField("100", text: $alphaInput)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .frame(width: 32)
+                        .background(inputBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
+                        .onSubmit {
+                            if let v = Double(alphaInput) { alpha = max(0, min(1, v / 100)); applyColor() }
+                        }
+                    Text("%").font(.system(size: 12)).foregroundColor(.white)
+                }
+
+                // 预设颜色 + 描边选项
+                HStack {
+                    // White preset
+                    Button(action: { setColor(Color.white) }) {
+                        Circle().fill(Color.white).frame(width: 18, height: 18)
+                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Black preset
+                    Button(action: { setColor(Color.black) }) {
+                        Circle().fill(Color.black).frame(width: 18, height: 18)
+                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Remove color
+                    Button(action: onRemove) {
+                        toolbarIcon("None", size: 18).foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+
+                    if showStrokeOptions {
+                        strokeOptionsView()
+                    }
+                }
+            }
+        }
+
+        private func numericField(label: String, value: Binding<String>, onSubmit: @escaping () -> Void) -> some View {
+            VStack(spacing: 0) {
+                Text(label).font(.system(size: 8)).foregroundColor(.white.opacity(0.5))
+                TextField("0", text: value)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 36, height: 22)
+                    .background(inputBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(inputStroke, lineWidth: 1))
+                    .onSubmit(onSubmit)
+            }
+        }
+
+        private func parseHex() {
+            let c = Color(hex: hexInput)
+            let ns = NSColor(c)
+            hue = Double(ns.hueComponent)
+            sat = Double(ns.saturationComponent)
+            bri = Double(ns.brightnessComponent)
+            applyColor()
+        }
+
+        private func parseHSB() {
+            guard let h = Double(hInput), let s = Double(sInput), let b = Double(bInput) else { return }
+            hue = max(0, min(360, h)) / 360
+            sat = max(0, min(100, s)) / 100
+            bri = max(0, min(100, b)) / 100
+            applyColor()
+        }
+
+        private func parseRGB() {
+            guard let r = Double(hInput), let g = Double(sInput), let bl = Double(bInput) else { return }
+            let c = Color(red: r / 255, green: g / 255, blue: bl / 255)
+            let ns = NSColor(c)
+            hue = Double(ns.hueComponent)
+            sat = Double(ns.saturationComponent)
+            bri = Double(ns.brightnessComponent)
+            applyColor()
+        }
+
+        // MARK: - Stroke Options
+        private func strokeOptionsView() -> some View {
+            VStack(spacing: 4) {
+                HStack {
+                    Text("粗细").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                    Slider(value: $strokeWeight, in: 0...20)
+                        .onChange(of: strokeWeight) { _, _ in onStrokeWeightChange(strokeWeight) }
+                    Text("\(Int(strokeWeight))").font(.system(size: 10, design: .monospaced)).foregroundColor(.white)
+                        .frame(width: 18)
+                }
+                HStack(spacing: 4) {
+                    Text("位置").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                    ForEach(["INSIDE", "CENTER", "OUTSIDE"], id: \.self) { align in
+                        Button(action: { strokeAlign = align; onStrokeAlignChange(align) }) {
+                            Text(["INSIDE":"内部","CENTER":"居中","OUTSIDE":"外部"][align] ?? align)
+                                .font(.system(size: 10))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(strokeAlign == align ? Color(red: 0.3, green: 0.5, blue: 0.9) : Color.clear)
+                                .foregroundColor(strokeAlign == align ? .white : .white.opacity(0.7))
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Color Extension
+
+extension Color {
+    func toHex() -> String {
+        guard let rgba = toRGBA() else { return "000000" }
+        return String(format: "%02X%02X%02X", Int(rgba.r*255), Int(rgba.g*255), Int(rgba.b*255))
+    }
 }
