@@ -131,7 +131,7 @@ cdp-toolbar/
    - 对齐按钮组（4 个 32px + 间距）: ~134px
    - `decorationButtons`（2 个 32px + 间距）: ~66px
    - `textCasePicker`（4 个 32px + 间距）: ~134px
-   - `autoResizePicker`（3 个 24px + 间距）: ~76px
+   - `autoResizePicker`（3 个 32px + 间距）: ~100px
    - `ColorPicker`（scaleEffect 0.75）: ~17px
    - `Separator`: 1px
    - `opacitySlider`: ~90px

@@ -66,14 +66,14 @@ struct ToolbarView: View {
         HStack(spacing: 6) {
             fontPicker(node: node)
             Separator(theme: theme)
-            NumField(label: "字号", labelIcon: "text font size", value: $fontSize, range: 1...999, theme: theme, onChange: { Task { _ = await delegate.api.setFontSize(fontSize) } })
+            PresetField(labelIcon: "text font size", value: $fontSize, presets: [10, 12, 14, 16, 18, 20, 24, 32], onChange: { v in Task { _ = await delegate.api.setFontSize(v) } }, theme: theme)
             alignButtons(node: node)
             Separator(theme: theme)
             // 行高：输入数字或 "auto" 回车确认
             LineHeightField(theme: theme, lineHeight: $lineHeight, lineHeightAuto: $lineHeightAuto, api: delegate.api)
-            NumField(label: "字距", labelIcon: "text letter spacing", value: $letterSpacing, range: -100...100, theme: theme, onChange: { Task { _ = await delegate.api.setLetterSpacing(letterSpacing) } })
-            NumField(label: "段距", labelIcon: "text paragraph spacing", value: $paragraphSpacing, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphSpacing(paragraphSpacing) } })
-            NumField(label: "缩进", labelIcon: "text paragraph indent", value: $paragraphIndent, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setParagraphIndent(paragraphIndent) } })
+            PresetField(labelIcon: "text letter spacing", value: $letterSpacing, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setLetterSpacing(v) } }, theme: theme)
+            PresetField(labelIcon: "text paragraph spacing", value: $paragraphSpacing, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setParagraphSpacing(v) } }, theme: theme)
+            PresetField(labelIcon: "text paragraph indent", value: $paragraphIndent, presets: [0, 2, 4, 8, 12, 16, 20, 32, 40], onChange: { v in Task { _ = await delegate.api.setParagraphIndent(v) } }, theme: theme)
             Separator(theme: theme)
             decorationButtons(node: node)
             textCasePicker(node: node)
@@ -268,12 +268,14 @@ struct ToolbarView: View {
 
     private func autoResizePicker(node: NodeProperties) -> some View {
         let r = node.textAutoResize ?? "NONE"
+        let svgMap = ["NONE":"text Fixed size", "WIDTH_AND_HEIGHT":"text Auto width", "HEIGHT":"text Auto height"]
         return HStack(spacing: 2) {
-            ForEach(Array(zip(["NONE","WIDTH_AND_HEIGHT","HEIGHT"], ["rectangle","rectangle.expand.vertical","rectangle.expand.diagonal"])), id: \.0) { v, icon in
+            ForEach(["WIDTH_AND_HEIGHT","HEIGHT","NONE"], id: \.self) { v in
                 Button { Task { _ = await delegate.api.setTextAutoResize(v) } } label: {
-                    Image(systemName: icon).font(.system(size: 10))
+                    toolbarIcon(svgMap[v] ?? "text Fixed size", size: 32).foregroundColor(theme.ink)
                 }
-                .buttonStyle(.plain).frame(width: 24, height: 24)
+                .buttonStyle(.plain).frame(width: 32, height: 32)
+                .contentShape(Rectangle())
                 .background(r == v ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
             }
         }
@@ -403,14 +405,96 @@ struct ToolbarView: View {
             .background(active ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
     }}
 
-    /// 行高输入：支持数字或 "auto"
+    /// 带预设下拉菜单的数值输入（点击展开，可选预设或输入自定义）
+    private struct PresetField: View {
+        let labelIcon: String
+        @Binding var value: Double
+        let presets: [Double]
+        let onChange: (Double) -> Void
+        let theme: FigmaTheme
+        @State private var inputText: String = ""
+        @State private var showDropdown: Bool = false
+        @FocusState private var isFocused: Bool
+
+        var body: some View {
+            HStack(spacing: 2) {
+                toolbarIcon(labelIcon, size: 20).foregroundColor(theme.ink)
+                ZStack(alignment: .center) {
+                    if inputText.isEmpty {
+                        Text("\(Int(value))")
+                            .font(FigmaTokens.fontCaption)
+                            .foregroundColor(theme.ink.opacity(0.35))
+                            .lineLimit(1)
+                            .allowsHitTesting(false)
+                    }
+                    TextField("", text: $inputText)
+                        .font(FigmaTokens.fontCaption)
+                        .multilineTextAlignment(.center)
+                        .textFieldStyle(.plain)
+                        .foregroundColor(theme.ink)
+                        .focused($isFocused)
+                        .onSubmit {
+                            if let n = Double(inputText) { value = n; onChange(n) }
+                            inputText = ""; showDropdown = false
+                        }
+                        .onChange(of: inputText) { _, nv in
+                            if !nv.isEmpty { showDropdown = true }
+                        }
+                }
+                .frame(width: 34)
+                .onChange(of: isFocused) { _, focused in
+                    if !focused { inputText = "" }
+                }
+            }
+            .frame(height: 28).padding(.horizontal, 4)
+            .background(theme.surfaceSoft)
+            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .overlay(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { isFocused = true; showDropdown = true }
+            )
+            .popover(isPresented: $showDropdown, arrowEdge: .bottom) {
+                VStack(spacing: 0) {
+                    ForEach(presets, id: \.self) { p in
+                        Button {
+                            value = p; onChange(p)
+                            inputText = ""; showDropdown = false
+                        } label: {
+                            HStack {
+                                Text("\(Int(p))")
+                                    .font(FigmaTokens.fontBody)
+                                    .foregroundColor(p == value ? FigmaColors.accentBlue : theme.ink)
+                                Spacer()
+                                if p == value {
+                                    Image(systemName: "checkmark")
+                                        .font(FigmaTokens.fontBodySmall)
+                                        .foregroundColor(FigmaColors.accentBlue)
+                                }
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(p == value ? FigmaColors.accentBlue.opacity(0.1) : Color.clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(width: 80)
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    /// 行高输入：支持数字或 "auto"，带预设下拉
     private struct LineHeightField: View {
         let theme: FigmaTheme
         @Binding var lineHeight: Double
         @Binding var lineHeightAuto: Bool
         let api: FigmaAPI
         @State private var inputText: String = ""
+        @State private var showDropdown: Bool = false
         @FocusState private var isFocused: Bool
+        let presets: [Double] = [10, 12, 14, 16, 18, 20, 24, 32]
 
         var body: some View {
             HStack(spacing: 2) {
@@ -439,8 +523,10 @@ struct ToolbarView: View {
                                 lineHeight = max(0, min(999, n))
                                 Task { await api.setLineHeight(lineHeight) }
                             }
-                            inputText = ""
-                            isFocused = false
+                            inputText = ""; showDropdown = false
+                        }
+                        .onChange(of: inputText) { _, nv in
+                            if !nv.isEmpty { showDropdown = true }
                         }
                 }
                 .frame(width: 34)
@@ -451,6 +537,63 @@ struct ToolbarView: View {
             .frame(height: 28).padding(.horizontal, 4)
             .background(theme.surfaceSoft)
             .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .overlay(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { isFocused = true; showDropdown = true }
+            )
+            .popover(isPresented: $showDropdown, arrowEdge: .bottom) {
+                VStack(spacing: 0) {
+                    Button {
+                        lineHeightAuto = true
+                        Task { await api.setLineHeightAuto() }
+                        inputText = ""; showDropdown = false
+                    } label: {
+                        HStack {
+                            Text("auto")
+                                .font(FigmaTokens.fontBody)
+                                .foregroundColor(lineHeightAuto ? FigmaColors.accentBlue : theme.ink)
+                            Spacer()
+                            if lineHeightAuto {
+                                Image(systemName: "checkmark")
+                                    .font(FigmaTokens.fontBodySmall)
+                                    .foregroundColor(FigmaColors.accentBlue)
+                            }
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(lineHeightAuto ? FigmaColors.accentBlue.opacity(0.1) : Color.clear)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Divider().padding(.vertical, 2)
+                    ForEach(presets, id: \.self) { p in
+                        Button {
+                            lineHeightAuto = false
+                            lineHeight = p
+                            Task { await api.setLineHeight(p) }
+                            inputText = ""; showDropdown = false
+                        } label: {
+                            HStack {
+                                Text("\(Int(p))")
+                                    .font(FigmaTokens.fontBody)
+                                    .foregroundColor(!lineHeightAuto && p == lineHeight ? FigmaColors.accentBlue : theme.ink)
+                                Spacer()
+                                if !lineHeightAuto && p == lineHeight {
+                                    Image(systemName: "checkmark")
+                                        .font(FigmaTokens.fontBodySmall)
+                                        .foregroundColor(FigmaColors.accentBlue)
+                                }
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(!lineHeightAuto && p == lineHeight ? FigmaColors.accentBlue.opacity(0.1) : Color.clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(width: 80)
+                .padding(.vertical, 4)
+            }
         }
     }
 
