@@ -168,18 +168,38 @@ final class FigmaAPI: @unchecked Sendable {
 
     // MARK: - Align
 
-    private func alignCmd(_ n: String) async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';figma.\(n)(s);return'ok'})()")
+    nonisolated func alignLeft() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.min(...s.map(function(n){return n.x}));s.forEach(function(n){n.x=m});return'ok'})()")
         return r?.contains("ok") ?? false
     }
-    nonisolated func alignLeft() async -> Bool { await alignCmd("alignLeft") }
-    nonisolated func alignHorizontalCenter() async -> Bool { await alignCmd("alignHorizontalCenter") }
-    nonisolated func alignRight() async -> Bool { await alignCmd("alignRight") }
-    nonisolated func alignTop() async -> Bool { await alignCmd("alignTop") }
-    nonisolated func alignVerticalCenter() async -> Bool { await alignCmd("alignVerticalCenter") }
-    nonisolated func alignBottom() async -> Bool { await alignCmd("alignBottom") }
-    nonisolated func distributeHorizontal() async -> Bool { await alignCmd("distributeHorizontalSpacing") }
-    nonisolated func distributeVertical() async -> Bool { await alignCmd("distributeVerticalSpacing") }
+    nonisolated func alignHorizontalCenter() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var c=s.reduce(function(a,n){return a+n.x+n.width/2},0)/s.length;s.forEach(function(n){n.x=c-n.width/2});return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func alignRight() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.max(...s.map(function(n){return n.x+n.width}));s.forEach(function(n){n.x=m-n.width});return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func alignTop() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.min(...s.map(function(n){return n.y}));s.forEach(function(n){n.y=m});return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func alignVerticalCenter() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var c=s.reduce(function(a,n){return a+n.y+n.height/2},0)/s.length;s.forEach(function(n){n.y=c-n.height/2});return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func alignBottom() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.max(...s.map(function(n){return n.y+n.height}));s.forEach(function(n){n.y=m-n.height});return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func distributeHorizontal() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var t=[...s].sort(function(a,b){return a.x-b.x});var w=t.reduce(function(a,n){return a+n.width},0);var g=(t[t.length-1].x+t[t.length-1].width-t[0].x-w)/(t.length-1);var cx=t[0].x;for(var i=0;i<t.length;i++){t[i].x=cx;cx+=t[i].width+g}return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
+    nonisolated func distributeVertical() async -> Bool {
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var t=[...s].sort(function(a,b){return a.y-b.y});var h=t.reduce(function(a,n){return a+n.height},0);var g=(t[t.length-1].y+t[t.length-1].height-t[0].y-h)/(t.length-1);var cy=t[0].y;for(var i=0;i<t.length;i++){t[i].y=cy;cy+=t[i].height+g}return'ok'})()")
+        return r?.contains("ok") ?? false
+    }
 
     nonisolated func disconnect() { client.disconnect() }
 

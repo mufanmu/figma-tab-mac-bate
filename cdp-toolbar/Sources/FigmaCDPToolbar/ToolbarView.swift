@@ -56,11 +56,11 @@ struct ToolbarView: View {
     private var desiredWidth: CGFloat {
         guard let node = delegate.selectedNode else { return 498 }
         if node.selectionCount > 1 || node.allTypes.count > 1 {
-            return 299
+            return 220
         } else if node.type == .text {
             return 498
         } else if node.type.isShape {
-            return 283
+            return 70
         }
         return 537
     }
@@ -152,10 +152,10 @@ struct ToolbarView: View {
             .frame(width: 84)
             .padding(.horizontal, 4)
             .frame(height: 24)
-            .background(Color(hex: "333333"))
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
-                RoundedRectangle(cornerRadius: FigmaTokens.roundedSm)
+                RoundedRectangle(cornerRadius: 4)
                     .stroke(theme.surfaceSoft, lineWidth: 1)
             )
             // 透明层捕获点击：聚焦 + 展开列表 + 定位当前字体
@@ -251,8 +251,8 @@ struct ToolbarView: View {
             }
             .buttonStyle(.plain)
             .frame(width: 56, height: 24)
-            .background(Color(hex: "333333"))
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .opacity(fontStyles.count <= 1 ? 0.35 : 1)
             .disabled(fontStyles.count <= 1)
             .popover(isPresented: $showStylePopover, arrowEdge: .bottom) {
@@ -307,7 +307,7 @@ struct ToolbarView: View {
                 toolbarIcon(svgMap[current] ?? "text align left", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(Color(hex: "333333")).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222")).clipShape(RoundedRectangle(cornerRadius: 4))
             .onHover { over in if over { showPopover = true } }
             .popover(isPresented:$showPopover, arrowEdge:.bottom) {
                 VStack(spacing:2) {
@@ -365,7 +365,7 @@ struct ToolbarView: View {
                 toolbarIcon("Setting", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(Color(hex: "333333")).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222")).clipShape(RoundedRectangle(cornerRadius: 4))
             .onHover { over in if over { show = true } }
             .popover(isPresented:$show, arrowEdge:.bottom) {
                 VStack(spacing:0) {
@@ -389,7 +389,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svg, size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentC==v ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentC==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline).padding(.horizontal,4)
@@ -401,7 +401,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svgMap[v] ?? "text Fixed size", size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentR==v ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentR==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline).padding(.horizontal,4)
@@ -412,15 +412,15 @@ struct ToolbarView: View {
                         TextField("0", text:Binding(get:{String(Int(ps))}, set:{if let v=Double($0){ps=v;onPS(ps)}}))
                             .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
-                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
-                            .overlay(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm).stroke(theme.hairline,lineWidth:1))
+                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline,lineWidth:1))
                             .onSubmit { onPS(ps) }
                         toolbarIcon("text paragraph indent", size:16).foregroundColor(theme.ink)
                         TextField("0", text:Binding(get:{String(Int(pi))}, set:{if let v=Double($0){pi=v;onPI(pi)}}))
                             .textFieldStyle(.plain).font(FigmaTokens.fontCaption).foregroundColor(theme.ink)
                             .multilineTextAlignment(.center).frame(width:44, height:22)
-                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
-                            .overlay(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm).stroke(theme.hairline,lineWidth:1))
+                            .background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.hairline,lineWidth:1))
                             .onSubmit { onPI(pi) }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.horizontal,8)
                 }
@@ -435,8 +435,6 @@ struct ToolbarView: View {
 
     private func shapeToolbar(node: NodeProperties) -> some View {
         HStack(spacing: 6) {
-            Text(node.name.prefix(14)).font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink).lineLimit(1)
-            Separator(theme: theme)
             HStack(spacing:2) {
                 ColorDotButton(color: fillColor, isFill: true, hasColor: node.fillColor != nil, isActive: showColorEditor && editingFill, theme: theme) { editingFill = true; showColorEditor = true }
                 ColorDotButton(color: strokeColor, isFill: false, hasColor: node.strokeColor != nil, isActive: showColorEditor && !editingFill, theme: theme) { editingFill = false; showColorEditor = true }
@@ -444,7 +442,6 @@ struct ToolbarView: View {
             .popover(isPresented: $showColorEditor, arrowEdge: .bottom) {
                 colorEditorPopover()
             }
-            NumField(label: "圆角", value: $cornerRadius, range: 0...999, theme: theme, onChange: { Task { _ = await delegate.api.setCornerRadius(cornerRadius) } })
         }
     }
 
@@ -452,18 +449,31 @@ struct ToolbarView: View {
 
     private func alignToolbar(node: NodeProperties) -> some View {
         HStack(spacing: 4) {
-            Text("\(node.selectionCount) 个").font(FigmaTokens.fontBodyMedium).foregroundColor(theme.ink)
-            Separator(theme: theme)
-            IconBtn(svg: "Align vertical left", theme: theme) { Task { _ = await delegate.api.alignLeft() } }
-            IconBtn(svg: "Align vertical center", theme: theme) { Task { _ = await delegate.api.alignHorizontalCenter() } }
-            IconBtn(svg: "Align vertical right", theme: theme) { Task { _ = await delegate.api.alignRight() } }
-            Separator(theme: theme)
-            IconBtn(svg: "Align horizontal top", theme: theme) { Task { _ = await delegate.api.alignTop() } }
-            IconBtn(svg: "Align horizontal center", theme: theme) { Task { _ = await delegate.api.alignVerticalCenter() } }
-            IconBtn(svg: "Align horizontal bottom", theme: theme) { Task { _ = await delegate.api.alignBottom() } }
-            Separator(theme: theme)
-            IconBtn(svg: "Distribute horizontal spacing", theme: theme) { Task { _ = await delegate.api.distributeHorizontal() } }
-            IconBtn(svg: "Distribute vertical spacing", theme: theme) { Task { _ = await delegate.api.distributeVertical() } }
+            // 垂直对齐组：左/中/右
+            HStack(spacing: 0) {
+                IconBtn(svg: "Align vertical left", theme: theme) { Task { _ = await delegate.api.alignLeft() } }
+                IconBtn(svg: "Align vertical center", theme: theme) { Task { _ = await delegate.api.alignHorizontalCenter() } }
+                IconBtn(svg: "Align vertical right", theme: theme) { Task { _ = await delegate.api.alignRight() } }
+            }
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            // 水平对齐组：上/中/下
+            HStack(spacing: 0) {
+                IconBtn(svg: "Align horizontal top", theme: theme) { Task { _ = await delegate.api.alignTop() } }
+                IconBtn(svg: "Align horizontal center", theme: theme) { Task { _ = await delegate.api.alignVerticalCenter() } }
+                IconBtn(svg: "Align horizontal bottom", theme: theme) { Task { _ = await delegate.api.alignBottom() } }
+            }
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            // 分布组：水平/垂直
+            HStack(spacing: 0) {
+                IconBtn(svg: "Distribute horizontal spacing", theme: theme) { Task { _ = await delegate.api.distributeHorizontal() } }
+                IconBtn(svg: "Distribute vertical spacing", theme: theme) { Task { _ = await delegate.api.distributeVertical() } }
+            }
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
 
@@ -537,7 +547,7 @@ struct ToolbarView: View {
                     UpDownBtn(icon: "chevron.down") { value = max(value - 1, range.lowerBound); onChange(); inputText = "" }
                 }
             }
-            .frame(height: 22).padding(.horizontal, 4).background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .frame(height: 22).padding(.horizontal, 4).background(theme.surfaceSoft).clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
 
@@ -552,7 +562,7 @@ struct ToolbarView: View {
             else if let s = system { Image(systemName: s).font(.system(size: 10)).foregroundColor(theme.ink) }
         }
             .buttonStyle(.plain).frame(width: size, height: size)
-            .background(active ? Color(hex: "333333") : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(active ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius: 4))
     }}
 
     /// 带预设下拉菜单的数值输入（点击展开，可选预设或输入自定义）
@@ -597,8 +607,8 @@ struct ToolbarView: View {
                 }
             }
             .frame(height: 24).padding(.horizontal, 4)
-            .background(Color(hex: "333333"))
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 Color.clear
                     .contentShape(Rectangle())
@@ -687,8 +697,8 @@ struct ToolbarView: View {
                 }
             }
             .frame(height: 24).padding(.horizontal, 4)
-            .background(Color(hex: "333333"))
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(Color(hex: "222222"))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 Color.clear
                     .contentShape(Rectangle())
@@ -754,7 +764,7 @@ struct ToolbarView: View {
     private struct IconBtn: View { let svg: String; let theme: FigmaTheme; let a: () -> Void; var body: some View {
         Button(action: a) { toolbarIcon(svg, size: 24).foregroundColor(theme.ink) }
             .buttonStyle(.plain).frame(width: 24, height: 24)
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
     }}
 
     private var opacitySlider: some View {
@@ -798,8 +808,8 @@ struct ToolbarView: View {
                     )
             }
             .buttonStyle(.plain).frame(width: 24, height: 24)
-            .background(isActive ? Color(hex: "333333") : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .background(isActive ? Color(hex: "222222") : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
 
