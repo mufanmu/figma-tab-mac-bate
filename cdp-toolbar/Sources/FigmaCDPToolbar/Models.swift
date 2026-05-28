@@ -81,6 +81,7 @@ struct NodeProperties: Codable {
     var strokeColor: RGBA?
     var strokeWeight: Double?
     var strokeAlign: String?      // "INSIDE" | "CENTER" | "OUTSIDE"
+    var strokeOpacity: Double?
 
     var fontSize: Double?
     var fontName: String?

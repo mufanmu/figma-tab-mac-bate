@@ -93,11 +93,12 @@ final class FigmaAPI: @unchecked Sendable {
         return r?.contains("ok") ?? false
     }
 
-    nonisolated func setStrokeColor(_ r: Double, _ g: Double, _ b: Double) async -> Bool {
+    nonisolated func setStrokeColor(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) async -> Bool {
         let rr = Double(lround(r * 1000)) / 1000
         let gg = Double(lround(g * 1000)) / 1000
         let bb = Double(lround(b * 1000)) / 1000
-        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokes=[{type:'SOLID',color:{r:\(rr),g:\(gg),b:\(bb)}}];return'ok'})()")
+        let aa = Double(lround(a * 100)) / 100
+        let res = await exec("(()=>{var s=figma.currentPage.selection;if(!s||!s.length)return'no';s[0].strokes=[{type:'SOLID',color:{r:\(rr),g:\(gg),b:\(bb)},opacity:\(aa)}];return'ok'})()")
         return res?.contains("ok") ?? false
     }
 
@@ -208,7 +209,7 @@ final class FigmaAPI: @unchecked Sendable {
         info.textAutoResize=n.textAutoResize||'NONE';
         }
         if(n.fills&&n.fills.length&&n.fills[0].type==='SOLID'){info.fillColor=n.fills[0].color;info.fillOpacity=n.fills[0].opacity}
-        if(n.strokes&&n.strokes.length&&n.strokes[0].type==='SOLID'){info.strokeColor=n.strokes[0].color;info.strokeWeight=n.strokeWeight;info.strokeAlign=n.strokeAlign}
+        if(n.strokes&&n.strokes.length&&n.strokes[0].type==='SOLID'){info.strokeColor=n.strokes[0].color;info.strokeOpacity=n.strokes[0].opacity;info.strokeWeight=n.strokeWeight;info.strokeAlign=n.strokeAlign}
         return JSON.stringify({vp:vp,node:info})})()
         """
     }

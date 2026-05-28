@@ -59,7 +59,7 @@ struct ToolbarView: View {
             title: editingFill ? "填充" : "描边",
             onApply: { c, a in
                 guard let rgba = c.toRGBA() else { return }
-                Task { if editingFill { _ = await delegate.api.setFillColor(rgba.r, rgba.g, rgba.b, rgba.a) } else { _ = await delegate.api.setStrokeColor(rgba.r, rgba.g, rgba.b) } }
+                Task { if editingFill { _ = await delegate.api.setFillColor(rgba.r, rgba.g, rgba.b, rgba.a) } else { _ = await delegate.api.setStrokeColor(rgba.r, rgba.g, rgba.b, rgba.a) } }
             },
             onRemove: { Task { if self.editingFill { await delegate.api.removeFill() } else { await delegate.api.removeStroke() } } },
             showStrokeOptions: !editingFill,
@@ -73,7 +73,7 @@ struct ToolbarView: View {
 
     private func updateFromNode(_ node: NodeProperties) {
         if let c = node.fillColor { fillColor = Color(red: c.r, green: c.g, blue: c.b); opacityValue = node.fillOpacity ?? node.opacity }
-        if let sc = node.strokeColor { strokeColor = Color(red: sc.r, green: sc.g, blue: sc.b) }
+        if let sc = node.strokeColor { let sa = node.strokeOpacity ?? 1.0; strokeColor = Color(red: sc.r, green: sc.g, blue: sc.b, opacity: sa) }
         cornerRadius = node.cornerRadius ?? 0; strokeWeight = node.strokeWeight ?? 1
         if let fs = node.fontSize { fontSize = fs }
         lineHeightAuto = node.lineHeightUnit == "AUTO"
@@ -251,18 +251,50 @@ struct ToolbarView: View {
         // 不自动展开：只在点击搜索区域时通过 overlay onTapGesture 打开
     }
 
-    private func alignButtons(node: NodeProperties) -> some View {
-        let a = node.textAlign ?? "LEFT"
-        let svgMap = ["LEFT":"text align left", "CENTER":"text align center", "RIGHT":"text align right", "JUSTIFIED":"text align justified"]
-        return HStack(spacing: 2) {
-            ForEach(["LEFT","CENTER","RIGHT","JUSTIFIED"], id: \.self) { t in
-                Button { Task { _ = await delegate.api.setTextAlign(t) } } label: {
-                    toolbarIcon(svgMap[t] ?? "text align left", size: 32).foregroundColor(theme.ink)
+    private struct AlignDropButton: View {
+        let current: String
+        let api: FigmaAPI
+        let svgMap: [String:String]
+        let theme: FigmaTheme
+        @State private var showPopover = false
+
+        var body: some View {
+            Button { showPopover = true } label: {
+                toolbarIcon(svgMap[current] ?? "text align left", size:32).foregroundColor(theme.ink)
+            }
+            .buttonStyle(.plain).frame(width:32, height:32)
+            .background(theme.hairline).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+            .onHover { over in if over { showPopover = true } }
+            .popover(isPresented:$showPopover, arrowEdge:.bottom) {
+                VStack(spacing:2) {
+                    ForEach(["LEFT","CENTER","RIGHT","JUSTIFIED"], id:\.self) { t in
+                        Button {
+                            Task { _ = await api.setTextAlign(t) }
+                            showPopover = false
+                        } label: {
+                            HStack {
+                                toolbarIcon(svgMap[t] ?? "text align left", size:18).foregroundColor(theme.ink)
+                                Text(["LEFT":"左对齐","CENTER":"居中","RIGHT":"右对齐","JUSTIFIED":"两端对齐"][t] ?? t)
+                                    .font(.system(size:11)).foregroundColor(.white)
+                            }
+                            .frame(maxWidth:.infinity, alignment:.leading)
+                            .padding(.horizontal,8).padding(.vertical,5)
+                            .background(t == current ? Color(hex:"0D99FF").opacity(0.3) : Color.clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain).frame(width: 32, height: 32)
-                .background(a == t ? theme.hairline : Color.clear).clipShape(RoundedRectangle(cornerRadius: FigmaTokens.roundedSm))
+                .padding(.vertical,4).frame(width:100)
+                .background(Color(red:0.17, green:0.17, blue:0.17))
+                .clipShape(RoundedRectangle(cornerRadius:8))
             }
         }
+    }
+
+    private func alignButtons(node: NodeProperties) -> some View {
+        let svgMap = ["LEFT":"text align left", "CENTER":"text align center", "RIGHT":"text align right", "JUSTIFIED":"text align justified"]
+        return AlignDropButton(current: node.textAlign ?? "LEFT", api: delegate.api, svgMap: svgMap, theme: theme)
     }
 
     private func decorationButtons(node: NodeProperties) -> some View {
