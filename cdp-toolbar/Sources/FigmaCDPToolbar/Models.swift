@@ -71,6 +71,8 @@ struct NodeProperties: Codable {
     var height: Double = 0
     var x: Double = 0
     var y: Double = 0
+    var absoluteX: Double = 0
+    var absoluteY: Double = 0
     var opacity: Double = 1
     var visible: Bool = true
     var locked: Bool = false

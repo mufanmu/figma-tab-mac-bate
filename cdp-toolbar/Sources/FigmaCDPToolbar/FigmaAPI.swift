@@ -192,7 +192,8 @@ final class FigmaAPI: @unchecked Sendable {
         var vp={zoom:figma.viewport.zoom,centerX:figma.viewport.center.x,centerY:figma.viewport.center.y,
         bounds:vb?{x:vb.x,y:vb.y,width:vb.width,height:vb.height}:null};
         if(!n)return JSON.stringify({vp:vp,node:null});
-        var info={id:n.id,name:n.name,type:n.type,width:n.width,height:n.height,x:n.x,y:n.y,
+        var ax=n.x,ay=n.y;var p=n.parent;while(p&&p.type!=='PAGE'){ax+=p.x;ay+=p.y;p=p.parent}
+        var info={id:n.id,name:n.name,type:n.type,width:n.width,height:n.height,x:n.x,y:n.y,absoluteX:ax,absoluteY:ay,
         opacity:n.opacity,visible:n.visible,locked:n.locked,cornerRadius:n.cornerRadius,
         selectionCount:s.length,allTypes:s.map(function(x){return x.type})};
         if(n.type==='TEXT'){

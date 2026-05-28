@@ -208,13 +208,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
               let canvas = canvas, let fw = findFigmaWindowQuartz()
         else { panel.orderOut(nil); return }
 
-        let nodeCX = node.x + node.width / 2
+        let nodeCX = node.absoluteX + node.width / 2
         let screenGap = 20.0
         let gapCanvas = screenGap * vb.height / canvas.height
 
         var domX = canvas.left + (nodeCX - vb.x) / vb.width * canvas.width
         var isBelow = false
-        var domY = canvas.top + (node.y - gapCanvas - vb.y) / vb.height * canvas.height
+        var domY = canvas.top + (node.absoluteY - gapCanvas - vb.y) / vb.height * canvas.height
         if domY < 0 {
             isBelow = true
             domX = canvas.left + canvas.width / 2
