@@ -51,7 +51,8 @@ enum SelectionType: String, Codable, CaseIterable {
     var isShape: Bool {
         switch self {
         case .rectangle, .ellipse, .polygon, .star, .frame,
-             .component, .instance, .section: return true
+             .component, .instance, .section, .vector, .group,
+             .line, .other: return true
         default: return false
         }
     }

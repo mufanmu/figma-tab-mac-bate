@@ -169,35 +169,35 @@ final class FigmaAPI: @unchecked Sendable {
     // MARK: - Align
 
     nonisolated func alignLeft() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.min(...s.map(function(n){return n.x}));s.forEach(function(n){n.x=m});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],x:bb.x})}var m=d[0].x;for(var i=1;i<d.length;i++){if(d[i].x<m){m=d[i].x}}for(var i=d.length-1;i>=0;i--){d[i].n.x=Math.round(d[i].n.x+m-d[i].x)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func alignHorizontalCenter() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var c=s.reduce(function(a,n){return a+n.x+n.width/2},0)/s.length;s.forEach(function(n){n.x=c-n.width/2});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],x:bb.x,w:bb.width})}var l=d[0].x,r=d[0].x+d[0].w;for(var i=1;i<d.length;i++){if(d[i].x<l){l=d[i].x}if(d[i].x+d[i].w>r){r=d[i].x+d[i].w}}var c=(l+r)/2;for(var i=d.length-1;i>=0;i--){var oldCX=d[i].x+d[i].w/2;d[i].n.x=Math.round(d[i].n.x+c-oldCX)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func alignRight() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.max(...s.map(function(n){return n.x+n.width}));s.forEach(function(n){n.x=m-n.width});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],x:bb.x,w:bb.width})}var m=d[0].x+d[0].w;for(var i=1;i<d.length;i++){var ri=d[i].x+d[i].w;if(ri>m){m=ri}}for(var i=d.length-1;i>=0;i--){var oldR=d[i].x+d[i].w;d[i].n.x=Math.round(d[i].n.x+m-oldR)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func alignTop() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.min(...s.map(function(n){return n.y}));s.forEach(function(n){n.y=m});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],y:bb.y})}var m=d[0].y;for(var i=1;i<d.length;i++){if(d[i].y<m){m=d[i].y}}for(var i=d.length-1;i>=0;i--){d[i].n.y=Math.round(d[i].n.y+m-d[i].y)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func alignVerticalCenter() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var c=s.reduce(function(a,n){return a+n.y+n.height/2},0)/s.length;s.forEach(function(n){n.y=c-n.height/2});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],y:bb.y,h:bb.height})}var t=d[0].y,b=d[0].y+d[0].h;for(var i=1;i<d.length;i++){if(d[i].y<t){t=d[i].y}if(d[i].y+d[i].h>b){b=d[i].y+d[i].h}}var c=(t+b)/2;for(var i=d.length-1;i>=0;i--){var oldCY=d[i].y+d[i].h/2;d[i].n.y=Math.round(d[i].n.y+c-oldCY)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func alignBottom() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var m=Math.max(...s.map(function(n){return n.y+n.height}));s.forEach(function(n){n.y=m-n.height});return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){var bb=s[i].absoluteBoundingBox;d.push({n:s[i],y:bb.y,h:bb.height})}var m=d[0].y+d[0].h;for(var i=1;i<d.length;i++){var bi=d[i].y+d[i].h;if(bi>m){m=bi}}for(var i=d.length-1;i>=0;i--){var oldB=d[i].y+d[i].h;d[i].n.y=Math.round(d[i].n.y+m-oldB)}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func distributeHorizontal() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var t=[...s].sort(function(a,b){return a.x-b.x});var w=t.reduce(function(a,n){return a+n.width},0);var g=(t[t.length-1].x+t[t.length-1].width-t[0].x-w)/(t.length-1);var cx=t[0].x;for(var i=0;i<t.length;i++){t[i].x=cx;cx+=t[i].width+g}return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){d.push({n:s[i],x:s[i].x,w:s[i].width})}d.sort(function(a,b){return a.x-b.x});var w=0;for(var i=0;i<d.length;i++){w+=d[i].w}var g=(d[d.length-1].x+d[d.length-1].w-d[0].x-w)/(d.length-1);var cx=d[0].x;for(var i=d.length-1;i>=0;i--){d[i].n.x=Math.round(cx);cx+=d[i].w+g}return'ok'})()")
         return r?.contains("ok") ?? false
     }
     nonisolated func distributeVertical() async -> Bool {
-        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var t=[...s].sort(function(a,b){return a.y-b.y});var h=t.reduce(function(a,n){return a+n.height},0);var g=(t[t.length-1].y+t[t.length-1].height-t[0].y-h)/(t.length-1);var cy=t[0].y;for(var i=0;i<t.length;i++){t[i].y=cy;cy+=t[i].height+g}return'ok'})()")
+        let r = await exec("(()=>{var s=figma.currentPage.selection;if(!s||s.length<2)return'no';var d=[];for(var i=0;i<s.length;i++){d.push({n:s[i],y:s[i].y,h:s[i].height})}d.sort(function(a,b){return a.y-b.y});var h=0;for(var i=0;i<d.length;i++){h+=d[i].h}var g=(d[d.length-1].y+d[d.length-1].h-d[0].y-h)/(d.length-1);var cy=d[0].y;for(var i=d.length-1;i>=0;i--){d[i].n.y=Math.round(cy);cy+=d[i].h+g}return'ok'})()")
         return r?.contains("ok") ?? false
     }
 
