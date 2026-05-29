@@ -40,7 +40,7 @@ struct ToolbarView: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 4)
         .frame(width: delegate.panelWidth)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.black.opacity(0.8)).shadow(color: theme.shadow, radius: 8, y: 2))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: "2C2C2C")).shadow(color: theme.shadow, radius: 8, y: 2))
         .onChange(of: "\(delegate.selectedNode?.id ?? "")-\(delegate.selectedNode?.selectionCount ?? 0)-\(delegate.selectedNode?.allTypes.count ?? 0)") { _, _ in
             if let node = delegate.selectedNode {
                 updateFromNode(node)
@@ -152,7 +152,7 @@ struct ToolbarView: View {
             .frame(width: 84)
             .padding(.horizontal, 4)
             .frame(height: 24)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
@@ -251,7 +251,7 @@ struct ToolbarView: View {
             }
             .buttonStyle(.plain)
             .frame(width: 56, height: 24)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .opacity(fontStyles.count <= 1 ? 0.35 : 1)
             .disabled(fontStyles.count <= 1)
@@ -307,7 +307,7 @@ struct ToolbarView: View {
                 toolbarIcon(svgMap[current] ?? "text align left", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(Color(hex: "222222")).clipShape(RoundedRectangle(cornerRadius: 4))
+            .background(Color(hex: "383838")).clipShape(RoundedRectangle(cornerRadius: 4))
             .onHover { over in if over { showPopover = true } }
             .popover(isPresented:$showPopover, arrowEdge:.bottom) {
                 VStack(spacing:2) {
@@ -365,7 +365,7 @@ struct ToolbarView: View {
                 toolbarIcon("Setting", size:24).foregroundColor(theme.ink)
             }
             .buttonStyle(.plain).frame(width:24, height:24)
-            .background(Color(hex: "222222")).clipShape(RoundedRectangle(cornerRadius: 4))
+            .background(Color(hex: "383838")).clipShape(RoundedRectangle(cornerRadius: 4))
             .onHover { over in if over { show = true } }
             .popover(isPresented:$show, arrowEdge:.bottom) {
                 VStack(spacing:0) {
@@ -389,7 +389,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svg, size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentC==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentC==v ? Color(hex: "383838") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline.opacity(0.7)).padding(.horizontal,4)
@@ -401,7 +401,7 @@ struct ToolbarView: View {
                                 toolbarIcon(svgMap[v] ?? "text Fixed size", size:20).foregroundColor(theme.ink)
                             }
                             .buttonStyle(.plain).frame(width:22, height:22)
-                            .background(currentR==v ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
+                            .background(currentR==v ? Color(hex: "383838") : Color.clear).clipShape(RoundedRectangle(cornerRadius:4))
                         }
                     }.frame(maxWidth:.infinity, alignment:.leading).padding(.leading,4)
                     Divider().overlay(theme.hairline.opacity(0.7)).padding(.horizontal,4)
@@ -456,7 +456,7 @@ struct ToolbarView: View {
                 IconBtn(svg: "Align vertical right", theme: theme) { Task { _ = await delegate.api.alignRight() } }
             }
             .padding(.horizontal, 2)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
             // 水平对齐组：上/中/下
@@ -466,7 +466,7 @@ struct ToolbarView: View {
                 IconBtn(svg: "Align horizontal bottom", theme: theme) { Task { _ = await delegate.api.alignBottom() } }
             }
             .padding(.horizontal, 2)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
             // 分布组：水平/垂直
@@ -475,7 +475,7 @@ struct ToolbarView: View {
                 IconBtn(svg: "Distribute vertical spacing", theme: theme) { Task { _ = await delegate.api.distributeVertical() } }
             }
             .padding(.horizontal, 2)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
@@ -565,7 +565,7 @@ struct ToolbarView: View {
             else if let s = system { Image(systemName: s).font(.system(size: 10)).foregroundColor(theme.ink) }
         }
             .buttonStyle(.plain).frame(width: size, height: size)
-            .background(active ? Color(hex: "222222") : Color.clear).clipShape(RoundedRectangle(cornerRadius: 4))
+            .background(active ? Color(hex: "383838") : Color.clear).clipShape(RoundedRectangle(cornerRadius: 4))
     }}
 
     /// 带预设下拉菜单的数值输入（点击展开，可选预设或输入自定义）
@@ -610,7 +610,7 @@ struct ToolbarView: View {
                 }
             }
             .frame(height: 24).padding(.horizontal, 4)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 Color.clear
@@ -700,7 +700,7 @@ struct ToolbarView: View {
                 }
             }
             .frame(height: 24).padding(.horizontal, 4)
-            .background(Color(hex: "222222"))
+            .background(Color(hex: "383838"))
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 Color.clear
@@ -797,8 +797,10 @@ struct ToolbarView: View {
                             if hasColor {
                                 if isFill {
                                     Circle().fill(color).frame(width: 16, height: 16)
+                                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
                                 } else {
                                     Circle().strokeBorder(color, lineWidth: 3).frame(width: 16, height: 16)
+                                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
                                 }
                             } else {
                                 if Bundle.module.url(forResource: "None", withExtension: "svg") != nil {
@@ -811,7 +813,7 @@ struct ToolbarView: View {
                     )
             }
             .buttonStyle(.plain).frame(width: 24, height: 24)
-            .background(isActive ? Color(hex: "222222") : Color.clear)
+            .background(isActive ? Color(hex: "383838") : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 4))
         }
     }
